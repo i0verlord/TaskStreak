@@ -1,0 +1,28 @@
+{
+  "name": "task-streak",
+  "version": "1.0.0",
+  "description": "Task Streak — Cross-Platform Habit & Task Tracker (Web & Mobile with Shared Node.js/PostgreSQL Backend)",
+  "private": true,
+  "workspaces": [
+    "streak-api",
+    "streak-web",
+    "streak-mobile"
+  ],
+  "scripts": {
+    "api": "npm --prefix streak-api run dev",
+    "web": "npm --prefix streak-web run dev",
+    "mobile": "npm --prefix streak-mobile start",
+    "test:api": "npm --prefix streak-api test"
+  },
+  "keywords": [
+    "habit-tracker",
+    "streak",
+    "cross-platform",
+    "expo",
+    "nextjs",
+    "postgresql",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT"
+}
