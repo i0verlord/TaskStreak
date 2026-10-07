@@ -76,14 +76,17 @@ async function initDbSchema() {
   }
 }
 
-// Start server
-app.listen(PORT, async () => {
-  console.log(`===============================================`);
-  console.log(`🚀 TaskStreak API running on http://localhost:${PORT}`);
-  console.log(`===============================================`);
+// Start server if run directly
+if (require.main === module) {
+  app.listen(PORT, async () => {
+    console.log(`===============================================`);
+    console.log(`🚀 TaskStreak API running on http://localhost:${PORT}`);
+    console.log(`===============================================`);
 
-  await initDbSchema();
-  initNotificationCron();
-});
+    await initDbSchema();
+    initNotificationCron();
+  });
+}
 
 module.exports = app;
+

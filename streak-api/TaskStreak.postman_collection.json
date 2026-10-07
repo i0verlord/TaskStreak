@@ -1,0 +1,213 @@
+{
+  "info": {
+    "_postman_id": "a9e1e3b2-6523-4c90-9c2b-taskstreak01",
+    "name": "TaskStreak API - Phase 1 Test Collection",
+    "description": "Comprehensive Postman test collection for TaskStreak backend API, covering timezone streak math, same-day blocking, and next-day continuation simulation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Server Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": ["{{baseUrl}}"],
+          "path": [""]
+        }
+      }
+    },
+    {
+      "name": "2. Get Tasks (With Local Completion Status)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks?userId={{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks"],
+          "query": [
+            {
+              "key": "userId",
+              "value": "{{userId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Click Done (First Time Today - Valid Continuation)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/log",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "log"]
+        },
+        "description": "Clicks Done today. Should evaluate timezone calendar day = yesterday + 1, incrementing the streak."
+      }
+    },
+    {
+      "name": "4. Click Done Again (Same Day - MUST BLOCK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/log",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "log"]
+        },
+        "description": "Clicks Done a second time today. MUST return HTTP 400 Bad Request with 'Task already completed today in local timezone'."
+      }
+    },
+    {
+      "name": "5. Simulate Clicking Done Next Day (MUST INCREMENT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"simulatedNowUtc\": \"2026-10-08T12:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/log",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "log"]
+        },
+        "description": "Simulates user clicking Done tomorrow. The server evaluates difference = 1 calendar day in user timezone and increments streak."
+      }
+    },
+    {
+      "name": "6. Simulate Missed Day With Streak Freeze (MUST SAVE STREAK)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"simulatedNowUtc\": \"2026-10-10T12:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/log",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "log"]
+        },
+        "description": "Simulates user missing 1 day (diff = 2). Uses available streak freeze, decrements freeze count, and continues streak."
+      }
+    },
+    {
+      "name": "7. Simulate Missed 3 Days (MUST BREAK & RESET TO 1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"simulatedNowUtc\": \"2026-10-14T12:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/log",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "log"]
+        },
+        "description": "Simulates user missing 4 days. Streak breaks and resets to 1, while preserving longest streak."
+      }
+    },
+    {
+      "name": "8. Fetch Task Logs (Heatmap Data)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/tasks/{{taskId}}/logs",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "tasks", "{{taskId}}", "logs"]
+        },
+        "description": "Queries all immutable UTC timestamp logs for the 365-day heatmap."
+      }
+    },
+    {
+      "name": "9. Update User Timezone",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timezone\": \"America/New_York\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users", "{{userId}}"]
+        }
+      }
+    },
+    {
+      "name": "10. Trigger Reminder Cron Check",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/test/reminders",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "test", "reminders"]
+        }
+      }
+    }
+  ]
+}

@@ -277,7 +277,8 @@ async function createTask(req, res) {
  */
 async function logTaskCompletion(req, res) {
   const taskId = parseInt(req.params.id, 10);
-  const nowUtc = new Date(); // Strict UTC server time
+  // Default to current UTC server time, or allow simulatedNowUtc for Postman / day-increment simulation testing
+  const nowUtc = req.body && req.body.simulatedNowUtc ? new Date(req.body.simulatedNowUtc) : new Date();
   const hasPg = await checkPostgres();
 
   if (hasPg) {
