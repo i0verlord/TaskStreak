@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import confetti from "canvas-confetti";
 import { Heatmap, TaskLog } from "@/components/Heatmap";
 import { 
@@ -13,8 +13,7 @@ import {
   Calendar,
   Lock,
   Sparkles,
-  Award,
-  AlertCircle
+  Award
 } from "lucide-react";
 
 interface Task {
@@ -60,17 +59,15 @@ export default function Dashboard() {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [taskLogs, setTaskLogs] = useState<TaskLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [optimisticDoneId, setOptimisticDoneId] = useState<number | null>(null);
+  const [isSubmittingTaskId, setIsSubmittingTaskId] = useState<number | null>(null);
 
   // Fetch tasks and user details
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      setErrorMsg(null);
       const res = await fetch(`${API_BASE_URL}/tasks?userId=${user.id}`);
       if (!res.ok) throw new Error("Failed to connect to API");
       const data = await res.json();
@@ -79,8 +76,9 @@ export default function Dashboard() {
       if (data.tasks?.length > 0 && selectedTaskId === null) {
         setSelectedTaskId(data.tasks[0].id);
       }
-    } catch (err: any) {
-      console.warn("API not reachable yet, using fallback offline state:", err.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "API offline";
+      console.warn("API unreachable, operating in demo preview mode:", msg);
       // Fallback local tasks for instant preview
       setTasks([
         {
@@ -115,10 +113,10 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.id, selectedTaskId]);
 
   // Fetch logs for the selected task (for heatmap)
-  const fetchLogsForTask = async (taskId: number) => {
+  const fetchLogsForTask = useCallback(async (taskId: number) => {
     try {
       const res = await fetch(`${API_BASE_URL}/tasks/${taskId}/logs`);
       if (res.ok) {
@@ -126,7 +124,7 @@ export default function Dashboard() {
         setTaskLogs(data.logs || []);
         return;
       }
-    } catch (err) {
+    } catch {
       // Mock logs fallback
     }
 
@@ -144,17 +142,17 @@ export default function Dashboard() {
       mockLogs.push({ id: 100 + i, task_id: taskId, completed_at: d.toISOString() });
     }
     setTaskLogs(mockLogs);
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   useEffect(() => {
     if (selectedTaskId !== null) {
       fetchLogsForTask(selectedTaskId);
     }
-  }, [selectedTaskId]);
+  }, [selectedTaskId, fetchLogsForTask]);
 
   // Handle clicking "Done" with Optimistic UI updates
   const handleMarkDone = async (task: Task) => {
@@ -162,7 +160,7 @@ export default function Dashboard() {
       return;
     }
 
-    setOptimisticDoneId(task.id);
+    setIsSubmittingTaskId(task.id);
 
     // Optimistically update task
     const previousTasks = [...tasks];
@@ -188,7 +186,9 @@ export default function Dashboard() {
         origin: { y: 0.65 },
         colors: ["#f97316", "#eab308", "#10b981", "#3b82f6"],
       });
-    } catch {}
+    } catch {
+      // Confetti fallback
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/tasks/${task.id}/log`, {
@@ -211,12 +211,12 @@ export default function Dashboard() {
           fetchLogsForTask(task.id);
         }
       }
-    } catch (err: any) {
+    } catch {
       // If API fails, keep optimistic state in local preview mode
       setActionNotice("Offline demo mode: Streak incremented locally! 🔥");
       setTimeout(() => setActionNotice(null), 4000);
     } finally {
-      setOptimisticDoneId(null);
+      setIsSubmittingTaskId(null);
     }
   };
 
@@ -230,7 +230,9 @@ export default function Dashboard() {
         body: JSON.stringify({ timezone: newTz }),
       });
       fetchDashboardData();
-    } catch {}
+    } catch {
+      // Handled silently
+    }
   };
 
   // Handle adding new task
@@ -409,6 +411,7 @@ export default function Dashboard() {
           {tasks.map((task) => {
             const isDoneToday = task.completed_today || task.is_locked;
             const isSelected = selectedTaskId === task.id;
+            const isSubmitting = isSubmittingTaskId === task.id;
 
             return (
               <div
@@ -469,7 +472,7 @@ export default function Dashboard() {
                       e.stopPropagation();
                       handleMarkDone(task);
                     }}
-                    disabled={isDoneToday}
+                    disabled={isDoneToday || isSubmitting}
                     className={`relative px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 ${
                       isDoneToday
                         ? "bg-zinc-800/80 text-zinc-500 cursor-not-allowed border border-zinc-700/50"
@@ -484,7 +487,7 @@ export default function Dashboard() {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Done</span>
+                        <span>{isSubmitting ? "Saving..." : "Done"}</span>
                       </>
                     )}
                   </button>
