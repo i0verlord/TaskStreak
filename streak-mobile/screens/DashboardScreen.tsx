@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,18 +7,20 @@ import {
   RefreshControl,
   TouchableOpacity,
   SafeAreaView,
+  TextInput,
 } from 'react-native';
 import { useTasks, Task } from '../hooks/useTasks';
 import { TaskCard } from '../components/TaskCard';
 import { Heatmap } from '../components/Heatmap';
 
 export const DashboardScreen = ({ navigation }: any) => {
-  const { tasks, user, loading, notice, setNotice, refreshTasks, markDone } = useTasks();
+  const { tasks, user, loading, notice, setNotice, refreshTasks, markDone, addTask, deleteTask } = useTasks();
 
-  // Pick the first task as active to show its Heatmap (or you could add a state to track selected task)
-  const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
-  
-  React.useEffect(() => {
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [newTaskTitle, setNewTaskTitle] = useState<string>('');
+  const [isCreating, setIsCreating] = useState<boolean>(false);
+
+  useEffect(() => {
     if (tasks.length > 0 && selectedTaskId === null) {
       setSelectedTaskId(tasks[0].id);
     }
@@ -26,12 +28,9 @@ export const DashboardScreen = ({ navigation }: any) => {
 
   const selectedTask = tasks.find(t => t.id === selectedTaskId) || tasks[0];
 
-  // For heatmap, we'll mock logs if the API doesn't fetch them, since we need an endpoint.
-  // We can just use an empty array or fetch them if useTasks returns logs, but for now
-  // let's create some dummy logs to show the Heatmap works beautifully.
-  const [mockLogs, setMockLogs] = React.useState<any[]>([]);
+  const [mockLogs, setMockLogs] = useState<any[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!selectedTask) return;
     const logs = [];
     const now = new Date();
@@ -42,6 +41,14 @@ export const DashboardScreen = ({ navigation }: any) => {
     }
     setMockLogs(logs);
   }, [selectedTask]);
+
+  const handleCreateTask = () => {
+    if (newTaskTitle.trim()) {
+      addTask(newTaskTitle);
+      setNewTaskTitle('');
+      setIsCreating(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -58,7 +65,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         {/* Top Status & Freeze Bar */}
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.appTitle}>TaskStreak <Text style={{fontSize: 18}}>🚀</Text></Text>
+            <Text style={styles.appTitle}>TaskStreak <Text style={{ fontSize: 18 }}>🚀</Text></Text>
             <Text style={styles.timezoneBadge}>
               Timezone: {user.timezone}
             </Text>
@@ -92,35 +99,68 @@ export const DashboardScreen = ({ navigation }: any) => {
         )}
 
         {/* Section Header */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Habit Checklist</Text>
-          <Text style={styles.sectionSubtitle}>
-            Complete your habits to keep your streak burning
-          </Text>
+        <View style={styles.sectionHeaderRow}>
+          <View>
+            <Text style={styles.sectionTitle}>Today's Checklist</Text>
+            <Text style={styles.sectionSubtitle}>
+              Complete your habits to keep your streak
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setIsCreating(!isCreating)}
+          >
+            <Text style={styles.addButtonText}>
+              {isCreating ? 'Cancel' : '+ Add'}
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Create Task Form */}
+        {isCreating && (
+          <View style={styles.createTaskContainer}>
+            <TextInput
+              style={styles.createTaskInput}
+              placeholder="e.g., Read 10 Pages..."
+              placeholderTextColor="#71717a"
+              value={newTaskTitle}
+              onChangeText={setNewTaskTitle}
+              autoFocus
+              onSubmitEditing={handleCreateTask}
+            />
+            <TouchableOpacity
+              style={[styles.createTaskButton, !newTaskTitle.trim() && { opacity: 0.5 }]}
+              onPress={handleCreateTask}
+              disabled={!newTaskTitle.trim()}
+            >
+              <Text style={styles.createTaskButtonText}>Create</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Task Cards */}
         {tasks.map((task: Task) => (
-          <TouchableOpacity 
-            key={task.id} 
+          <TouchableOpacity
+            key={task.id}
             onPress={() => setSelectedTaskId(task.id)}
             activeOpacity={0.9}
           >
-            <TaskCard 
-              task={task} 
-              onDone={markDone} 
-              isSelected={selectedTaskId === task.id} 
+            <TaskCard
+              task={task}
+              onDone={markDone}
+              onDelete={deleteTask}
+              isSelected={selectedTaskId === task.id}
             />
           </TouchableOpacity>
         ))}
 
         {/* Selected Task Heatmap */}
         {selectedTask && (
-          <Heatmap 
-            logs={mockLogs} 
-            taskTitle={selectedTask.title} 
-            currentStreak={selectedTask.current_streak} 
-            longestStreak={selectedTask.longest_streak} 
+          <Heatmap
+            logs={mockLogs}
+            taskTitle={selectedTask.title}
+            currentStreak={selectedTask.current_streak}
+            longestStreak={selectedTask.longest_streak}
           />
         )}
       </ScrollView>
@@ -154,7 +194,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#a1a1aa',
     marginTop: 2,
-    fontFamily: 'System',
   },
   topRight: {
     flexDirection: 'row',
@@ -204,7 +243,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
-  sectionHeader: {
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
@@ -218,5 +260,46 @@ const styles = StyleSheet.create({
     color: '#71717a',
     marginTop: 4,
     fontWeight: '500',
+  },
+  addButton: {
+    backgroundColor: 'rgba(234, 88, 12, 0.15)',
+    borderWidth: 1,
+    borderColor: '#ea580c',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  addButtonText: {
+    color: '#ea580c',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  createTaskContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 20,
+  },
+  createTaskInput: {
+    flex: 1,
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#f4f4f5',
+    fontSize: 15,
+  },
+  createTaskButton: {
+    backgroundColor: '#ea580c',
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  createTaskButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
 });

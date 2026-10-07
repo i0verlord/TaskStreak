@@ -258,8 +258,9 @@ async function createTask(req, res) {
     }
   }
 
+  const maxId = mockTasks.length > 0 ? Math.max(...mockTasks.map(t => t.id)) : 0;
   const newTask = {
-    id: mockTasks.length + 1,
+    id: maxId + 1,
     user_id: userId,
     title: title.trim(),
     current_streak: 0,
@@ -457,6 +458,47 @@ async function getTaskLogs(req, res) {
   return res.json({ logs });
 }
 
+/**
+ * DELETE /api/tasks/:id
+ * Delete a task and its logs
+ */
+async function deleteTask(req, res) {
+  const taskId = parseInt(req.params.id, 10);
+  const hasPg = await checkPostgres();
+
+  if (hasPg) {
+    const client = await db.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM task_logs WHERE task_id = $1', [taskId]);
+      const result = await client.query('DELETE FROM tasks WHERE id = $1 RETURNING *', [taskId]);
+      
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Task not found' });
+      }
+      
+      await client.query('COMMIT');
+      return res.json({ success: true, message: 'Task deleted successfully' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: err.message });
+    } finally {
+      client.release();
+    }
+  }
+
+  // Fallback mock mode
+  const initialLength = mockTasks.length;
+  mockTasks = mockTasks.filter(t => t.id !== taskId);
+  
+  if (mockTasks.length === initialLength) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  return res.json({ success: true, message: 'Task deleted successfully' });
+}
+
 module.exports = {
   getUser,
   updateUser,
@@ -464,4 +506,5 @@ module.exports = {
   createTask,
   logTaskCompletion,
   getTaskLogs,
+  deleteTask,
 };

@@ -47,35 +47,35 @@ export function useTasks(userId: number = 1) {
     } catch (err: any) {
       console.log('[useTasks] API unreachable, using local fallback state:', err.message);
       // Fallback state
-      setTasks([
-        {
-          id: 1,
-          user_id: userId,
-          title: 'Study Java & Data Structures',
-          current_streak: 14,
-          longest_streak: 21,
-          completed_today: false,
-          is_locked: false,
-        },
-        {
-          id: 2,
-          user_id: userId,
-          title: 'Morning 5km Run',
-          current_streak: 5,
-          longest_streak: 12,
-          completed_today: false,
-          is_locked: false,
-        },
-        {
-          id: 3,
-          user_id: userId,
-          title: 'Read 20 Pages',
-          current_streak: 0,
-          longest_streak: 8,
-          completed_today: false,
-          is_locked: false,
-        },
-      ]);
+      // setTasks([
+      //   {
+      //     id: 1,
+      //     user_id: userId,
+      //     title: 'Study Java & Data Structures',
+      //     current_streak: 14,
+      //     longest_streak: 21,
+      //     completed_today: false,
+      //     is_locked: false,
+      //   },
+      //   {
+      //     id: 2,
+      //     user_id: userId,
+      //     title: 'Morning 5km Run',
+      //     current_streak: 5,
+      //     longest_streak: 12,
+      //     completed_today: false,
+      //     is_locked: false,
+      //   },
+      //   {
+      //     id: 3,
+      //     user_id: userId,
+      //     title: 'Read 20 Pages',
+      //     current_streak: 0,
+      //     longest_streak: 8,
+      //     completed_today: false,
+      //     is_locked: false,
+      //   },
+      // ]);
     } finally {
       setLoading(false);
     }
@@ -99,12 +99,12 @@ export function useTasks(userId: number = 1) {
       current.map((t) =>
         t.id === task.id
           ? {
-              ...t,
-              current_streak: t.current_streak + 1,
-              longest_streak: Math.max(t.longest_streak, t.current_streak + 1),
-              completed_today: true,
-              is_locked: true,
-            }
+            ...t,
+            current_streak: t.current_streak + 1,
+            longest_streak: Math.max(t.longest_streak, t.current_streak + 1),
+            completed_today: true,
+            is_locked: true,
+          }
           : t
       )
     );
@@ -132,7 +132,7 @@ export function useTasks(userId: number = 1) {
 
   const addTask = async (title: string) => {
     if (!title.trim()) return;
-    
+
     // Optimistic fallback for offline mode
     const newTask: Task = {
       id: Date.now(),
@@ -150,7 +150,7 @@ export function useTasks(userId: number = 1) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), userId: user.id }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         setTasks((prev) => [...prev, data.task]);

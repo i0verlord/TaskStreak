@@ -11,6 +11,7 @@ const {
   createTask,
   logTaskCompletion,
   getTaskLogs,
+  deleteTask,
 } = require('./controllers/taskController');
 const { initNotificationCron, checkAndSendReminders } = require('./services/notifier');
 
@@ -52,6 +53,7 @@ app.get('/api/tasks', getTasks);
 app.post('/api/tasks', createTask);
 app.post('/api/tasks/:id/log', logTaskCompletion);
 app.get('/api/tasks/:id/logs', getTaskLogs);
+app.delete('/api/tasks/:id', deleteTask);
 
 // Push notification manual trigger (for testing / debugging)
 app.post('/api/test/reminders', async (req, res) => {
