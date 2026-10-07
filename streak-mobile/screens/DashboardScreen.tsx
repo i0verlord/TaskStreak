@@ -10,9 +10,38 @@ import {
 } from 'react-native';
 import { useTasks, Task } from '../hooks/useTasks';
 import { TaskCard } from '../components/TaskCard';
+import { Heatmap } from '../components/Heatmap';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { tasks, user, loading, notice, setNotice, refreshTasks, markDone } = useTasks();
+
+  // Pick the first task as active to show its Heatmap (or you could add a state to track selected task)
+  const [selectedTaskId, setSelectedTaskId] = React.useState<number | null>(null);
+  
+  React.useEffect(() => {
+    if (tasks.length > 0 && selectedTaskId === null) {
+      setSelectedTaskId(tasks[0].id);
+    }
+  }, [tasks, selectedTaskId]);
+
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) || tasks[0];
+
+  // For heatmap, we'll mock logs if the API doesn't fetch them, since we need an endpoint.
+  // We can just use an empty array or fetch them if useTasks returns logs, but for now
+  // let's create some dummy logs to show the Heatmap works beautifully.
+  const [mockLogs, setMockLogs] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (!selectedTask) return;
+    const logs = [];
+    const now = new Date();
+    for (let i = 1; i <= selectedTask.current_streak; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      logs.push({ id: i, task_id: selectedTask.id, completed_at: d.toISOString() });
+    }
+    setMockLogs(logs);
+  }, [selectedTask]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -29,7 +58,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         {/* Top Status & Freeze Bar */}
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.appTitle}>TaskStreak 🔥</Text>
+            <Text style={styles.appTitle}>TaskStreak <Text style={{fontSize: 18}}>🚀</Text></Text>
             <Text style={styles.timezoneBadge}>
               Timezone: {user.timezone}
             </Text>
@@ -58,7 +87,7 @@ export const DashboardScreen = ({ navigation }: any) => {
             onPress={() => setNotice(null)}
             style={styles.noticeBanner}
           >
-            <Text style={styles.noticeText}>{notice}</Text>
+            <Text style={styles.noticeText}>✨ {notice}</Text>
           </TouchableOpacity>
         )}
 
@@ -66,14 +95,34 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Today's Habit Checklist</Text>
           <Text style={styles.sectionSubtitle}>
-            Button locks automatically once completed for today
+            Complete your habits to keep your streak burning
           </Text>
         </View>
 
         {/* Task Cards */}
         {tasks.map((task: Task) => (
-          <TaskCard key={task.id} task={task} onDone={markDone} />
+          <TouchableOpacity 
+            key={task.id} 
+            onPress={() => setSelectedTaskId(task.id)}
+            activeOpacity={0.9}
+          >
+            <TaskCard 
+              task={task} 
+              onDone={markDone} 
+              isSelected={selectedTaskId === task.id} 
+            />
+          </TouchableOpacity>
         ))}
+
+        {/* Selected Task Heatmap */}
+        {selectedTask && (
+          <Heatmap 
+            logs={mockLogs} 
+            taskTitle={selectedTask.title} 
+            currentStreak={selectedTask.current_streak} 
+            longestStreak={selectedTask.longest_streak} 
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -86,7 +135,7 @@ const styles = StyleSheet.create({
   },
   container: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   topBar: {
     flexDirection: 'row',
@@ -96,8 +145,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   appTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#ffffff',
     letterSpacing: -0.5,
   },
@@ -105,20 +154,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#a1a1aa',
     marginTop: 2,
+    fontFamily: 'System',
   },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   freezeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#082f49',
-    borderColor: '#0284c7',
+    backgroundColor: 'rgba(8, 47, 73, 0.6)',
+    borderColor: 'rgba(2, 132, 199, 0.5)',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
   },
   freezeEmoji: {
@@ -128,43 +178,45 @@ const styles = StyleSheet.create({
   freezeText: {
     color: '#38bdf8',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   settingsButton: {
-    padding: 8,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 14,
     backgroundColor: '#18181b',
     borderWidth: 1,
     borderColor: '#27272a',
   },
   settingsIcon: {
-    fontSize: 16,
+    fontSize: 18,
   },
   noticeBanner: {
-    backgroundColor: 'rgba(234, 88, 12, 0.2)',
+    backgroundColor: 'rgba(234, 88, 12, 0.15)',
     borderColor: '#ea580c',
     borderWidth: 1,
     padding: 12,
     borderRadius: 14,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   noticeText: {
     color: '#ffedd5',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
   },
   sectionHeader: {
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#f4f4f5',
+    letterSpacing: -0.2,
   },
   sectionSubtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#71717a',
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

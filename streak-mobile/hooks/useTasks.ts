@@ -130,6 +130,61 @@ export function useTasks(userId: number = 1) {
     }
   };
 
+  const addTask = async (title: string) => {
+    if (!title.trim()) return;
+    
+    // Optimistic fallback for offline mode
+    const newTask: Task = {
+      id: Date.now(),
+      user_id: user.id,
+      title: title.trim(),
+      current_streak: 0,
+      longest_streak: 0,
+      completed_today: false,
+      is_locked: false,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim(), userId: user.id }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setTasks((prev) => [...prev, data.task]);
+        setNotice('Task added! ✨');
+      } else {
+        const data = await res.json();
+        setNotice(data.error || 'Failed to add task');
+        setTasks((prev) => [...prev, newTask]); // Offline demo mode
+      }
+    } catch (err) {
+      setTasks((prev) => [...prev, newTask]); // Offline demo mode
+      setNotice('Offline Demo Mode: Task created locally!');
+    }
+  };
+
+  const deleteTask = async (taskId: number) => {
+    const prevTasks = [...tasks];
+    setTasks((current) => current.filter((t) => t.id !== taskId));
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setNotice('Task deleted. 🗑️');
+      } else {
+        setTasks(prevTasks);
+        setNotice('Failed to delete task');
+      }
+    } catch (err) {
+      setNotice('Offline Demo Mode: Task deleted locally!');
+    }
+  };
+
   return {
     tasks,
     user,
@@ -139,5 +194,7 @@ export function useTasks(userId: number = 1) {
     setNotice,
     refreshTasks: fetchTasks,
     markDone,
+    addTask,
+    deleteTask,
   };
 }

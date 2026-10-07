@@ -7,14 +7,17 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Task } from '../hooks/useTasks';
 
 interface TaskCardProps {
   task: Task;
   onDone: (task: Task) => void;
+  onDelete?: (taskId: number) => void;
+  isSelected?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone, onDelete, isSelected }) => {
   const isLocked = task.completed_today || task.is_locked;
 
   // Reanimated shared values for bouncing fire emoji
@@ -46,74 +49,104 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone }) => {
   });
 
   return (
-    <View style={[styles.card, isLocked && styles.cardLocked]}>
-      {/* Header Info */}
-      <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={2}>
-            {task.title}
-          </Text>
-          <Text style={styles.longestStreak}>
-            Best Streak: {task.longest_streak} days 🏆
-          </Text>
+    <View style={[
+      styles.cardWrapper,
+      isSelected && styles.cardWrapperSelected
+    ]}>
+      <View style={[styles.card, isLocked && styles.cardLocked]}>
+        {/* Header Info */}
+        <View style={styles.header}>
+          <View style={styles.titleContainer}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <Text style={[styles.title, { flex: 1 }]} numberOfLines={2}>
+                {task.title}
+              </Text>
+              {onDelete && (
+                <TouchableOpacity 
+                  onPress={() => onDelete(task.id)} 
+                  style={{ marginLeft: 8, padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 }}
+                >
+                  <Text style={{ fontSize: 14 }}>🗑️</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text style={styles.longestStreak}>
+              Best Streak: {task.longest_streak} days 🏆
+            </Text>
+          </View>
+
+          {/* Animated Fire Emoji Badge */}
+          <View style={styles.fireBadge}>
+            <Animated.Text style={[styles.fireEmoji, animatedFireStyle]}>
+              🔥
+            </Animated.Text>
+            <Text style={styles.streakCount}>{task.current_streak}</Text>
+          </View>
         </View>
 
-        {/* Animated Fire Emoji Badge */}
-        <View style={styles.fireBadge}>
-          <Animated.Text style={[styles.fireEmoji, animatedFireStyle]}>
-            🔥
-          </Animated.Text>
-          <Text style={styles.streakCount}>{task.current_streak}</Text>
-        </View>
-      </View>
+        {/* Action Footer */}
+        <View style={styles.footer}>
+          <View>
+            <Text style={styles.statusLabel}>
+              {isLocked ? 'Completed Today ✨' : 'Ready to Check In'}
+            </Text>
+            <Text style={styles.statusSub}>
+              {isLocked ? 'Button locked until tomorrow' : 'Tap to continue your streak'}
+            </Text>
+          </View>
 
-      {/* Action Footer */}
-      <View style={styles.footer}>
-        <View>
-          <Text style={styles.statusLabel}>
-            {isLocked ? 'Completed Today ✨' : 'Ready to Check In'}
-          </Text>
-          <Text style={styles.statusSub}>
-            {isLocked ? 'Button locked until tomorrow' : 'Tap to continue your streak'}
-          </Text>
+          {/* Large Circular "Done" Button */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            disabled={isLocked}
+            onPress={() => onDone(task)}
+          >
+            {isLocked ? (
+              <View style={[styles.doneButton, styles.doneButtonDisabled]}>
+                <Text style={styles.doneButtonTextDisabled}>LOCKED</Text>
+              </View>
+            ) : (
+              <LinearGradient
+                colors={['#f97316', '#ea580c', '#c2410c']}
+                style={styles.doneButton}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.doneButtonText}>DONE</Text>
+              </LinearGradient>
+            )}
+          </TouchableOpacity>
         </View>
-
-        {/* Large Circular "Done" Button */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          disabled={isLocked}
-          onPress={() => onDone(task)}
-          style={[
-            styles.doneButton,
-            isLocked ? styles.doneButtonDisabled : styles.doneButtonActive,
-          ]}
-        >
-          <Text style={[styles.doneButtonText, isLocked && styles.doneButtonTextDisabled]}>
-            {isLocked ? 'LOCKED' : 'DONE'}
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  cardWrapper: {
+    marginBottom: 16,
+    borderRadius: 22,
+    padding: 2,
+    backgroundColor: 'transparent',
+  },
+  cardWrapperSelected: {
+    backgroundColor: '#ea580c',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
   card: {
     backgroundColor: '#18181b',
     borderRadius: 20,
     padding: 20,
-    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#27272a',
-    shadowColor: '#f97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
   },
   cardLocked: {
     borderColor: '#3f3f46',
-    opacity: 0.88,
+    opacity: 0.85,
   },
   header: {
     flexDirection: 'row',
@@ -126,23 +159,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#f4f4f5',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   longestStreak: {
     fontSize: 12,
     color: '#a1a1aa',
-    marginTop: 4,
-    fontWeight: '500',
+    marginTop: 6,
+    fontWeight: '600',
   },
   fireBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(234, 88, 12, 0.15)',
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(234, 88, 12, 0.4)',
   },
@@ -151,8 +184,8 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   streakCount: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#fb923c',
   },
   footer: {
@@ -165,29 +198,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statusLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#e4e4e7',
   },
   statusSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#71717a',
     marginTop: 2,
+    fontWeight: '500',
   },
   doneButton: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
     elevation: 4,
-  },
-  doneButtonActive: {
-    backgroundColor: '#ea580c',
-    shadowColor: '#ea580c',
-    shadowOpacity: 0.4,
   },
   doneButtonDisabled: {
     backgroundColor: '#27272a',
@@ -196,12 +225,13 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '900',
     letterSpacing: 0.5,
   },
   doneButtonTextDisabled: {
     color: '#71717a',
-    fontSize: 11,
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
