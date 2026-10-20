@@ -80,10 +80,7 @@ export const DashboardScreen = ({ navigation }: any) => {
         {/* Top Status Bar (App Branding + Settings Button) */}
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.appTitle}>TaskStreak <Text style={{ fontSize: 18 }}>🚀</Text></Text>
-            <Text style={styles.timezoneBadge}>
-              Timezone: {user?.timezone || 'Asia/Calcutta'}
-            </Text>
+            <Text style={styles.appTitle}>TaskStreak <Text style={{ fontSize: 22 }}>💪</Text></Text>
           </View>
 
           <View style={styles.topRight}>
@@ -97,22 +94,12 @@ export const DashboardScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Temporary Notice Banner */}
-        {notice && (
-          <TouchableOpacity
-            onPress={() => setNotice(null)}
-            style={styles.noticeBanner}
-          >
-            <Text style={styles.noticeText}>✨ {notice}</Text>
-          </TouchableOpacity>
-        )}
-
         {/* Section Header */}
             <View style={styles.sectionHeaderRow}>
               <View>
-                <Text style={styles.sectionTitle}>Today's Checklist</Text>
+                <Text style={styles.sectionTitle}>Active Habits</Text>
                 <Text style={styles.sectionSubtitle}>
-                  Complete your habits to keep your streak
+                  Making healthy habits everyday
                 </Text>
               </View>
               <TouchableOpacity
@@ -153,9 +140,9 @@ export const DashboardScreen = ({ navigation }: any) => {
                 <View style={styles.thinkingEmojiContainer}>
                   <Text style={styles.thinkingEmoji}>🤔</Text>
                 </View>
-                <Text style={styles.emptyTitle}>No habits yet...</Text>
+                <Text style={styles.emptyTitle}>No tasks here yet...</Text>
                 <Text style={styles.emptySubtitle}>
-                  Thinking about what habits to build today? Tap "+ Add" above to start your streak!
+                  Let's start building healthy habits!
                 </Text>
               </View>
             ) : (
@@ -234,7 +221,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: '#0B0F19',
   },
   container: {
     padding: 20,
@@ -285,7 +272,7 @@ const styles = StyleSheet.create({
   settingsButton: {
     padding: 10,
     borderRadius: 14,
-    backgroundColor: '#18181b',
+    backgroundColor: '#0E162A',
     borderWidth: 1,
     borderColor: '#27272a',
   },
@@ -344,7 +331,7 @@ const styles = StyleSheet.create({
   },
   createTaskInput: {
     flex: 1,
-    backgroundColor: '#18181b',
+    backgroundColor: '#151F2F',
     borderWidth: 1,
     borderColor: '#27272a',
     borderRadius: 12,
@@ -427,7 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 48,
     paddingHorizontal: 24,
-    backgroundColor: 'rgba(24, 24, 27, 0.4)',
+    backgroundColor: '#0C1220',
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: '#27272a',
@@ -438,7 +425,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: '#18181b',
+    backgroundColor: '#192337',
     borderWidth: 1,
     borderColor: '#27272a',
     alignItems: 'center',

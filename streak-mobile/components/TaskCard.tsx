@@ -159,14 +159,14 @@ const styles = StyleSheet.create({
     borderColor: '#ea580c',
   },
   card: {
-    backgroundColor: '#18181b',
+    backgroundColor: '#0E1527',
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
     borderColor: '#27272a',
   },
   cardLocked: {
-    backgroundColor: '#141416',
+    backgroundColor: '#0E1527',
     borderColor: '#1f1f23',
     opacity: 0.9,
   },
