@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { isTaskCompletedToday } from '../utils/dateMath';
 
 export interface Task {
-  id: number;
-  user_id: number;
+  id: number | string;
+  _id?: string;
+  user_id?: number | string;
+  userId?: number | string;
   title: string;
   current_streak: number;
   longest_streak: number;
@@ -14,24 +15,27 @@ export interface Task {
 }
 
 export interface User {
-  id: number;
+  id: number | string;
+  _id?: string;
   email: string;
   timezone: string;
   streak_freezes_available: number;
   expo_push_token?: string | null;
+  notification?: 'enabled' | 'disabled';
 }
 
 // Development default host: Android emulator uses 10.0.2.2, iOS/Web uses localhost
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 export const API_BASE_URL = `http://${DEFAULT_HOST}:5000/api`;
 
-export function useTasks(userId: number = 1) {
+export function useTasks(userId: number | string = '670000000000000000000001') {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [user, setUser] = useState<User>({
     id: userId,
     email: 'alex@taskstreak.dev',
     timezone: 'Asia/Calcutta',
     streak_freezes_available: 2,
+    notification: 'enabled',
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -46,36 +50,6 @@ export function useTasks(userId: number = 1) {
       if (data.user) setUser(data.user);
     } catch (err: any) {
       console.log('[useTasks] API unreachable, using local fallback state:', err.message);
-      // Fallback state
-      // setTasks([
-      //   {
-      //     id: 1,
-      //     user_id: userId,
-      //     title: 'Study Java & Data Structures',
-      //     current_streak: 14,
-      //     longest_streak: 21,
-      //     completed_today: false,
-      //     is_locked: false,
-      //   },
-      //   {
-      //     id: 2,
-      //     user_id: userId,
-      //     title: 'Morning 5km Run',
-      //     current_streak: 5,
-      //     longest_streak: 12,
-      //     completed_today: false,
-      //     is_locked: false,
-      //   },
-      //   {
-      //     id: 3,
-      //     user_id: userId,
-      //     title: 'Read 20 Pages',
-      //     current_streak: 0,
-      //     longest_streak: 8,
-      //     completed_today: false,
-      //     is_locked: false,
-      //   },
-      // ]);
     } finally {
       setLoading(false);
     }
@@ -91,7 +65,6 @@ export function useTasks(userId: number = 1) {
       return;
     }
 
-    // Save previous snapshot in case rollback is needed
     const prevTasks = [...tasks];
 
     // Optimistically update: +1 streak, locked immediately
@@ -99,12 +72,12 @@ export function useTasks(userId: number = 1) {
       current.map((t) =>
         t.id === task.id
           ? {
-            ...t,
-            current_streak: t.current_streak + 1,
-            longest_streak: Math.max(t.longest_streak, t.current_streak + 1),
-            completed_today: true,
-            is_locked: true,
-          }
+              ...t,
+              current_streak: t.current_streak + 1,
+              longest_streak: Math.max(t.longest_streak, t.current_streak + 1),
+              completed_today: true,
+              is_locked: true,
+            }
           : t
       )
     );
@@ -113,19 +86,18 @@ export function useTasks(userId: number = 1) {
       const res = await fetch(`${API_BASE_URL}/tasks/${task.id}/log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        // Rollback optimistic update
         setTasks(prevTasks);
         setNotice(data.error || 'Could not mark task as done');
       } else {
         setNotice(data.message || 'Streak increased! 🔥');
       }
-    } catch (err: any) {
-      // In offline preview mode, maintain the optimistic update
+    } catch {
       setNotice('Offline Demo Mode: Streak incremented locally! 🔥');
     }
   };
@@ -133,9 +105,8 @@ export function useTasks(userId: number = 1) {
   const addTask = async (title: string) => {
     if (!title.trim()) return;
 
-    // Optimistic fallback for offline mode
     const newTask: Task = {
-      id: Date.now(),
+      id: Date.now().toString(),
       user_id: user.id,
       title: title.trim(),
       current_streak: 0,
@@ -158,31 +129,66 @@ export function useTasks(userId: number = 1) {
       } else {
         const data = await res.json();
         setNotice(data.error || 'Failed to add task');
-        setTasks((prev) => [...prev, newTask]); // Offline demo mode
+        setTasks((prev) => [...prev, newTask]);
       }
-    } catch (err) {
-      setTasks((prev) => [...prev, newTask]); // Offline demo mode
+    } catch {
+      setTasks((prev) => [...prev, newTask]);
       setNotice('Offline Demo Mode: Task created locally!');
     }
   };
 
-  const deleteTask = async (taskId: number) => {
+  const updateTask = async (taskId: number | string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+
+    setTasks((current) =>
+      current.map((t) => (t.id === taskId ? { ...t, title: newTitle.trim() } : t))
+    );
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim(), userId: user.id }),
+      });
+      if (res.ok) {
+        setNotice('Task renamed! ✏️');
+      }
+    } catch {
+      setNotice('Offline Demo Mode: Task renamed locally! ✏️');
+    }
+  };
+
+  const deleteTask = async (taskId: number | string) => {
     const prevTasks = [...tasks];
     setTasks((current) => current.filter((t) => t.id !== taskId));
 
     try {
       const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
       });
       if (res.ok) {
-        setNotice('Task deleted. 🗑️');
+        setNotice('Task permanently deleted from database. 🗑️');
       } else {
         setTasks(prevTasks);
         setNotice('Failed to delete task');
       }
-    } catch (err) {
+    } catch {
       setNotice('Offline Demo Mode: Task deleted locally!');
     }
+  };
+
+  const updateUserSetting = async (updates: Partial<User>) => {
+    setUser((prev) => ({ ...prev, ...updates }));
+
+    try {
+      await fetch(`${API_BASE_URL}/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch {}
   };
 
   return {
@@ -195,6 +201,8 @@ export function useTasks(userId: number = 1) {
     refreshTasks: fetchTasks,
     markDone,
     addTask,
+    updateTask,
     deleteTask,
+    updateUserSetting,
   };
 }

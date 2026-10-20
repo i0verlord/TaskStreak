@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Switch,
 } from 'react-native';
 import { API_BASE_URL } from '../hooks/useTasks';
 
@@ -21,20 +22,24 @@ const TIMEZONES = [
 ];
 
 export const SettingsScreen = ({ route, navigation }: any) => {
-  const user = route.params?.user || {
-    id: 1,
+  const initialUser = route.params?.user || {
+    id: '670000000000000000000001',
     timezone: 'Asia/Calcutta',
     streak_freezes_available: 2,
+    notification: 'enabled',
   };
 
-  const [selectedTz, setSelectedTz] = useState(user.timezone || 'Asia/Calcutta');
+  const [selectedTz, setSelectedTz] = useState(initialUser.timezone || 'Asia/Calcutta');
+  const [notificationEnabled, setNotificationEnabled] = useState(
+    initialUser.notification !== 'disabled'
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSaveTimezone = async (tz: string) => {
     setSelectedTz(tz);
     setSaving(true);
     try {
-      await fetch(`${API_BASE_URL}/users/${user.id}`, {
+      await fetch(`${API_BASE_URL}/users/${initialUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timezone: tz }),
@@ -44,6 +49,21 @@ export const SettingsScreen = ({ route, navigation }: any) => {
       Alert.alert('Notice', `Timezone set locally to ${tz}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleNotification = async (value: boolean) => {
+    setNotificationEnabled(value);
+    const newStatus = value ? 'enabled' : 'disabled';
+
+    try {
+      await fetch(`${API_BASE_URL}/users/${initialUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification: newStatus }),
+      });
+    } catch {
+      console.log('[Settings] Saved notification state locally:', newStatus);
     }
   };
 
@@ -60,7 +80,35 @@ export const SettingsScreen = ({ route, navigation }: any) => {
           <Text style={styles.title}>Settings</Text>
         </View>
 
-        {/* Timezone Section */}
+        {/* 1. Push Notification Toggle Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Push Notifications</Text>
+          <Text style={styles.sectionDesc}>
+            Enable or disable automated alerts at 8:00 PM local time if any daily habit is left uncompleted.
+          </Text>
+
+          <View style={styles.toggleCard}>
+            <View style={{ flex: 1, marginRight: 16 }}>
+              <Text style={styles.toggleTitle}>
+                {notificationEnabled ? '🔔 Reminders Enabled' : '🔕 Reminders Disabled'}
+              </Text>
+              <Text style={styles.toggleSubtitle}>
+                {notificationEnabled
+                  ? 'Active alerts scheduled daily at 8:00 PM'
+                  : 'All streak reminder notifications paused'}
+              </Text>
+            </View>
+
+            <Switch
+              value={notificationEnabled}
+              onValueChange={handleToggleNotification}
+              trackColor={{ false: '#27272a', true: '#ea580c' }}
+              thumbColor={notificationEnabled ? '#ffffff' : '#71717a'}
+            />
+          </View>
+        </View>
+
+        {/* 2. Timezone Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Timezone Synchronization</Text>
           <Text style={styles.sectionDesc}>
@@ -86,26 +134,18 @@ export const SettingsScreen = ({ route, navigation }: any) => {
           </View>
         </View>
 
-        {/* Streak Freezes Section */}
+        {/* 3. Streak Freezes Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Streak Protection</Text>
           <View style={styles.freezeInfoCard}>
             <Text style={styles.freezeCardTitle}>❄️ Streak Freezes</Text>
             <Text style={styles.freezeCardCount}>
-              {user.streak_freezes_available} Freezes Available
+              {initialUser.streak_freezes_available ?? 2} Freezes Available
             </Text>
             <Text style={styles.freezeCardDesc}>
               If you miss a single day, an available freeze will automatically save your streak counter from resetting to zero.
             </Text>
           </View>
-        </View>
-
-        {/* Push Notification Hook Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Expo Push Notification Hook</Text>
-          <Text style={styles.sectionDesc}>
-            The server runs an hourly cron job checking for 8:00 PM in your timezone. If an active task is uncompleted, an Expo Push Notification is dispatched to protect your streak.
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -156,6 +196,26 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     lineHeight: 18,
     marginBottom: 14,
+  },
+  toggleCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#18181b',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  toggleTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  toggleSubtitle: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
   },
   tzList: {
     backgroundColor: '#18181b',

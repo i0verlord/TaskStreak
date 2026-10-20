@@ -13,11 +13,18 @@ import { Task } from '../hooks/useTasks';
 interface TaskCardProps {
   task: Task;
   onDone: (task: Task) => void;
-  onDelete?: (taskId: number) => void;
+  onEdit?: (task: Task) => void;
+  onDelete?: (taskId: number | string) => void;
   isSelected?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone, onDelete, isSelected }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({
+  task,
+  onDone,
+  onEdit,
+  onDelete,
+  isSelected,
+}) => {
   const isLocked = task.completed_today || task.is_locked;
 
   // Reanimated shared values for bouncing fire emoji
@@ -49,27 +56,39 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone, onDelete, isSe
   });
 
   return (
-    <View style={[
-      styles.cardWrapper,
-      isSelected && styles.cardWrapperSelected
-    ]}>
+    <View style={[styles.cardWrapper, isSelected && styles.cardWrapperSelected]}>
       <View style={[styles.card, isLocked && styles.cardLocked]}>
         {/* Header Info */}
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={[styles.title, { flex: 1 }]} numberOfLines={2}>
                 {task.title}
               </Text>
-              {onDelete && (
-                <TouchableOpacity 
-                  onPress={() => onDelete(task.id)} 
-                  style={{ marginLeft: 8, padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 }}
+
+              {/* Edit Button */}
+              {onEdit && (
+                <TouchableOpacity
+                  onPress={() => onEdit(task)}
+                  style={styles.actionIconButton}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={{ fontSize: 14 }}>🗑️</Text>
+                  <Text style={{ fontSize: 13 }}>✏️</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Delete Button */}
+              {onDelete && (
+                <TouchableOpacity
+                  onPress={() => onDelete(task.id)}
+                  style={[styles.actionIconButton, { backgroundColor: 'rgba(239, 68, 68, 0.1)', marginLeft: 6 }]}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={{ fontSize: 13 }}>🗑️</Text>
                 </TouchableOpacity>
               )}
             </View>
+
             <Text style={styles.longestStreak}>
               Best Streak: {task.longest_streak} days 🏆
             </Text>
@@ -98,21 +117,24 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone, onDelete, isSe
           {/* Large Circular "Done" Button */}
           <TouchableOpacity
             activeOpacity={0.8}
-            disabled={isLocked}
             onPress={() => onDone(task)}
+            disabled={isLocked}
+            style={[styles.buttonWrapper, isLocked && styles.buttonDisabled]}
           >
             {isLocked ? (
-              <View style={[styles.doneButton, styles.doneButtonDisabled]}>
-                <Text style={styles.doneButtonTextDisabled}>LOCKED</Text>
+              <View style={styles.lockedInner}>
+                <Text style={styles.lockIcon}>🔒</Text>
+                <Text style={styles.lockText}>DONE</Text>
               </View>
             ) : (
               <LinearGradient
-                colors={['#f97316', '#ea580c', '#c2410c']}
-                style={styles.doneButton}
+                colors={['#ea580c', '#c2410c']}
+                style={styles.activeGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Text style={styles.doneButtonText}>DONE</Text>
+                <Text style={styles.doneText}>DONE</Text>
+                <Text style={styles.doneCheck}>✓</Text>
               </LinearGradient>
             )}
           </TouchableOpacity>
@@ -124,34 +146,35 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onDone, onDelete, isSe
 
 const styles = StyleSheet.create({
   cardWrapper: {
+    borderRadius: 20,
     marginBottom: 16,
-    borderRadius: 22,
-    padding: 2,
-    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cardWrapperSelected: {
-    backgroundColor: '#ea580c',
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+    borderWidth: 2,
+    borderColor: '#ea580c',
   },
   card: {
     backgroundColor: '#18181b',
     borderRadius: 20,
-    padding: 20,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#27272a',
   },
   cardLocked: {
-    borderColor: '#3f3f46',
-    opacity: 0.85,
+    backgroundColor: '#141416',
+    borderColor: '#1f1f23',
+    opacity: 0.9,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 16,
   },
   titleContainer: {
     flex: 1,
@@ -159,79 +182,102 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#f4f4f5',
-    letterSpacing: -0.2,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+  actionIconButton: {
+    padding: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 8,
   },
   longestStreak: {
     fontSize: 12,
     color: '#a1a1aa',
-    marginTop: 6,
-    fontWeight: '600',
+    fontWeight: '500',
+    marginTop: 2,
   },
   fireBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(234, 88, 12, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.4)',
+    borderColor: 'rgba(234, 88, 12, 0.3)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   fireEmoji: {
-    fontSize: 20,
-    marginRight: 6,
+    fontSize: 18,
+    marginRight: 4,
   },
   streakCount: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#fb923c',
   },
   footer: {
-    marginTop: 20,
-    paddingTop: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#27272a',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingTop: 14,
   },
   statusLabel: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#e4e4e7',
+    fontWeight: '600',
+    color: '#f4f4f5',
   },
   statusSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#71717a',
     marginTop: 2,
-    fontWeight: '500',
   },
-  doneButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  buttonWrapper: {
+    width: 80,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+  },
+  buttonDisabled: {
+    opacity: 0.85,
+  },
+  activeGradient: {
+    flex: 1,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 4,
   },
-  doneButtonDisabled: {
+  doneText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 13,
+    marginRight: 4,
+  },
+  doneCheck: {
+    color: '#ffffff',
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  lockedInner: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#27272a',
     borderWidth: 1,
     borderColor: '#3f3f46',
+    borderRadius: 22,
   },
-  doneButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  doneButtonTextDisabled: {
-    color: '#71717a',
+  lockIcon: {
     fontSize: 12,
-    fontWeight: '800',
+    marginRight: 4,
+  },
+  lockText: {
+    color: '#a1a1aa',
+    fontWeight: '700',
+    fontSize: 11,
   },
 });

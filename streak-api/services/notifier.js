@@ -1,7 +1,11 @@
 const cron = require('node-cron');
 const { Expo } = require('expo-server-sdk');
-const db = require('../db');
+const User = require('../models/User');
+const Task = require('../models/Task');
+const TaskLog = require('../models/TaskLog');
+const { isMongoConnected } = require('../db/mongo');
 const { getLocalDateString } = require('../utils/streakCalculator');
+const { mockUsers, getTasksForUser } = require('./taskService');
 
 // Initialize Expo SDK client
 const expo = new Expo();
@@ -29,24 +33,32 @@ async function sendExpoPushNotifications(messages) {
 }
 
 /**
- * Checks all users whose local time is 8:00 PM (20:00) and who have incomplete tasks for today.
- * Triggers reminder push notifications.
+ * Checks all users whose local time is 8:00 PM (20:00), who have notifications enabled,
+ * and who have incomplete tasks for today.
  */
 async function checkAndSendReminders() {
   console.log('[Notifier] Checking for users needing reminders at 8:00 PM local time...');
   const now = new Date();
 
   try {
-    // 1. Fetch users with valid Expo push tokens
-    const usersResult = await db.query(
-      `SELECT id, email, timezone, expo_push_token FROM users WHERE expo_push_token IS NOT NULL AND expo_push_token != ''`
-    );
+    let eligibleUsers = [];
 
-    const users = usersResult.rows;
+    if (isMongoConnected()) {
+      // Find users with notification enabled and a valid push token
+      eligibleUsers = await User.find({
+        notification: 'enabled',
+        expo_push_token: { $ne: null, $exists: true, $nin: [''] },
+      });
+    } else {
+      eligibleUsers = mockUsers.filter(
+        (u) => u.notification === 'enabled' && u.expo_push_token
+      );
+    }
+
     const messages = [];
 
-    for (const user of users) {
-      const userTz = user.timezone || 'UTC';
+    for (const user of eligibleUsers) {
+      const userTz = user.timezone || 'Asia/Calcutta';
 
       // Check current local hour in user's timezone
       let localHour;
@@ -61,25 +73,13 @@ async function checkAndSendReminders() {
         localHour = now.getUTCHours();
       }
 
-      // If it's 8:00 PM (hour 20) in the user's timezone
+      // If it's 8:00 PM (hour 20) in user's timezone
       if (localHour === 20) {
-        const todayLocal = getLocalDateString(now, userTz);
+        const { tasks } = await getTasksForUser(user._id.toString());
 
-        // Fetch user's tasks
-        const tasksResult = await db.query(
-          `SELECT t.id, t.title, t.current_streak,
-                  (SELECT completed_at FROM task_logs tl WHERE tl.task_id = t.id ORDER BY completed_at DESC LIMIT 1) as last_completed_at
-           FROM tasks t
-           WHERE t.user_id = $1`,
-          [user.id]
-        );
-
-        for (const task of tasksResult.rows) {
-          const lastCompletedAt = task.last_completed_at;
-          const completedToday = lastCompletedAt && getLocalDateString(lastCompletedAt, userTz) === todayLocal;
-
-          // If task is not completed today
-          if (!completedToday) {
+        for (const task of tasks) {
+          // If task not completed today
+          if (!task.completed_today) {
             const streakCount = task.current_streak || 0;
             const body = streakCount > 0
               ? `You are about to lose your ${streakCount}-day "${task.title}" streak!`

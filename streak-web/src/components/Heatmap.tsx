@@ -1,12 +1,12 @@
-"use client";
-
 import React, { useMemo } from "react";
 import { format, subDays, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 
 export interface TaskLog {
-  id: number;
-  task_id: number;
-  completed_at: string;
+  id?: string | number;
+  _id?: string | number;
+  taskId?: string | number;
+  task_id?: string | number;
+  completed_at: string | Date;
 }
 
 interface HeatmapProps {

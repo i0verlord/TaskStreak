@@ -13,7 +13,8 @@ import {
   Calendar,
   Lock,
   Sparkles,
-  Award
+  Award,
+  Trash2
 } from "lucide-react";
 
 interface Task {
@@ -279,6 +280,34 @@ export default function Dashboard() {
     setIsCreatingTask(false);
   };
 
+  // Handle deleting a task
+  const handleDeleteTask = async (taskId: number) => {
+    const previousTasks = [...tasks];
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    
+    if (selectedTaskId === taskId) {
+       const remaining = tasks.filter(t => t.id !== taskId);
+       setSelectedTaskId(remaining.length > 0 ? remaining[0].id : null);
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setTasks(previousTasks);
+        setActionNotice("Failed to delete task");
+        setTimeout(() => setActionNotice(null), 4000);
+      } else {
+        setActionNotice("Task deleted 🗑️");
+        setTimeout(() => setActionNotice(null), 4000);
+      }
+    } catch {
+      setActionNotice("Offline demo mode: Task deleted locally 🗑️");
+      setTimeout(() => setActionNotice(null), 4000);
+    }
+  };
+
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
 
   return (
@@ -437,16 +466,30 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Fire Streak Badge */}
-                  <div
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-sm transition-transform group-hover:scale-105 ${
-                      task.current_streak > 0
-                        ? "bg-orange-950/60 border-orange-500/50 text-orange-400 shadow-sm shadow-orange-500/20"
-                        : "bg-zinc-800/60 border-zinc-700 text-zinc-400"
-                    }`}
-                  >
-                    <span className="text-base animate-bounce">🔥</span>
-                    <span>{task.current_streak}</span>
+                  {/* Right Badges & Actions */}
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id);
+                      }}
+                      className="p-1.5 sm:p-2 rounded-xl border border-transparent hover:border-red-500/50 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition"
+                      title="Delete Task"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    {/* Fire Streak Badge */}
+                    <div
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-bold text-sm transition-transform group-hover:scale-105 ${
+                        task.current_streak > 0
+                          ? "bg-orange-950/60 border-orange-500/50 text-orange-400 shadow-sm shadow-orange-500/20"
+                          : "bg-zinc-800/60 border-zinc-700 text-zinc-400"
+                      }`}
+                    >
+                      <span className="text-base animate-bounce">🔥</span>
+                      <span>{task.current_streak}</span>
+                    </div>
                   </div>
                 </div>
 

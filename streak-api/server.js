@@ -1,18 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const jwt = require('jsonwebtoken');
+const { RPCHandler } = require('@orpc/server/node');
 require('dotenv').config();
 
-const db = require('./db');
-const {
-  getUser,
-  updateUser,
-  getTasks,
-  createTask,
-  logTaskCompletion,
-  getTaskLogs,
-  deleteTask,
-} = require('./controllers/taskController');
+const { connectMongo } = require('./db/mongo');
+const { seedDefaultUserIfMongo, ...taskService } = require('./services/taskService');
+const { appRouter, JWT_SECRET } = require('./orpc/router');
 const { initNotificationCron, checkAndSendReminders } = require('./services/notifier');
 
 const app = express();
@@ -23,19 +18,45 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Health check & root status
+// 1. oRPC Handler mounted under /rpc
+const rpcHandler = new RPCHandler(appRouter);
+
+app.use('/rpc', async (req, res, next) => {
+  let userId = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET);
+      userId = decoded.userId;
+    } catch {
+      // Invalid/expired token
+    }
+  }
+
+  const { matched } = await rpcHandler.handle(req, res, {
+    prefix: '/rpc',
+    context: {
+      userId,
+      req,
+      res,
+    },
+  });
+
+  if (matched) return;
+  next();
+});
+
+// 2. Health & Root status
 app.get('/', (req, res) => {
   res.json({
     name: 'TaskStreak API',
     status: 'online',
-    version: '1.0.0',
-    documentation: {
-      tasks: 'GET /api/tasks?userId=1',
-      createTask: 'POST /api/tasks',
-      logDone: 'POST /api/tasks/:id/log',
-      heatmapLogs: 'GET /api/tasks/:id/logs',
-      user: 'GET /api/users/:id',
-      updateUser: 'PUT /api/users/:id',
+    version: '2.0.0',
+    protocol: 'oRPC + Express (Node.js)',
+    database: 'MongoDB Atlas (with Mongoose ODM)',
+    endpoints: {
+      orpc: 'POST /rpc/<procedure>',
+      health: 'GET /health',
     },
   });
 });
@@ -44,18 +65,93 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// User routes
-app.get('/api/users/:id', getUser);
-app.put('/api/users/:id', updateUser);
+// 3. Fallback REST compatibility routes (convenience for curl / postman / legacy clients)
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const userId = req.query.userId || '670000000000000000000001';
+    const result = await taskService.getTasksForUser(userId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-// Task routes
-app.get('/api/tasks', getTasks);
-app.post('/api/tasks', createTask);
-app.post('/api/tasks/:id/log', logTaskCompletion);
-app.get('/api/tasks/:id/logs', getTaskLogs);
-app.delete('/api/tasks/:id', deleteTask);
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const userId = req.body.userId || '670000000000000000000001';
+    const task = await taskService.createTaskForUser(userId, req.body.title);
+    res.status(201).json({ task });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
-// Push notification manual trigger (for testing / debugging)
+app.put('/api/tasks/:id', async (req, res) => {
+  try {
+    const userId = req.body.userId || '670000000000000000000001';
+    const task = await taskService.updateTaskForUser(userId, req.params.id, req.body.title);
+    res.json({ task });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const userId = req.query.userId || req.body.userId || '670000000000000000000001';
+    const result = await taskService.deleteTaskForUser(userId, req.params.id);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/tasks/:id/log', async (req, res) => {
+  try {
+    const userId = req.body.userId || '670000000000000000000001';
+    const result = await taskService.logTaskCompletion(
+      userId,
+      req.params.id,
+      req.body.simulatedNowUtc
+    );
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      error: err.message,
+      details: err.details,
+    });
+  }
+});
+
+app.get('/api/tasks/:id/logs', async (req, res) => {
+  try {
+    const logs = await taskService.getTaskLogs(req.params.id);
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const user = await taskService.getUserById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const user = await taskService.updateUser(req.params.id, req.body);
+    res.json({ user });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.post('/api/test/reminders', async (req, res) => {
   try {
     await checkAndSendReminders();
@@ -65,30 +161,18 @@ app.post('/api/test/reminders', async (req, res) => {
   }
 });
 
-// Auto-seed schema on boot if Postgres is available
-async function initDbSchema() {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-    await db.query(schemaSql);
-    console.log('[Database] PostgreSQL schema verified/initialized.');
-  } catch (err) {
-    console.log('[Database] Skipped direct schema execution (PostgreSQL offline or already initialized):', err.message);
-  }
-}
-
-// Start server if run directly
+// Boot server
 if (require.main === module) {
   app.listen(PORT, async () => {
-    console.log(`===============================================`);
+    console.log(`================================================`);
     console.log(`🚀 TaskStreak API running on http://localhost:${PORT}`);
-    console.log(`===============================================`);
+    console.log(`🔌 oRPC Endpoint: http://localhost:${PORT}/rpc`);
+    console.log(`================================================`);
 
-    await initDbSchema();
+    await connectMongo();
+    await seedDefaultUserIfMongo();
     initNotificationCron();
   });
 }
 
 module.exports = app;
-

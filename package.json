@@ -1,7 +1,7 @@
 {
   "name": "task-streak",
-  "version": "1.0.0",
-  "description": "Task Streak — Cross-Platform Habit & Task Tracker (Web & Mobile with Shared Node.js/PostgreSQL Backend)",
+  "version": "2.0.0",
+  "description": "TaskStreak — Cross-Platform Habit & Task Tracker (React Router, Expo Mobile, Node.js/Express with oRPC & MongoDB Atlas)",
   "private": true,
   "workspaces": [
     "streak-api",
@@ -12,15 +12,19 @@
     "api": "npm --prefix streak-api run dev",
     "web": "npm --prefix streak-web run dev",
     "mobile": "npm --prefix streak-mobile start",
-    "test:api": "npm --prefix streak-api test"
+    "test:api": "npm --prefix streak-api test",
+    "test:orpc": "npm --prefix streak-api run test:orpc",
+    "build:web": "npm --prefix streak-web run build"
   },
   "keywords": [
     "habit-tracker",
     "streak",
     "cross-platform",
     "expo",
-    "nextjs",
-    "postgresql",
+    "react-router",
+    "mongodb",
+    "mongoose",
+    "orpc",
     "express"
   ],
   "author": "",

@@ -8,17 +8,33 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useTasks, Task } from '../hooks/useTasks';
 import { TaskCard } from '../components/TaskCard';
 import { Heatmap } from '../components/Heatmap';
 
 export const DashboardScreen = ({ navigation }: any) => {
-  const { tasks, user, loading, notice, setNotice, refreshTasks, markDone, addTask, deleteTask } = useTasks();
+  const {
+    tasks,
+    user,
+    loading,
+    notice,
+    setNotice,
+    refreshTasks,
+    markDone,
+    addTask,
+    updateTask,
+    deleteTask,
+  } = useTasks();
 
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState<string>('');
   const [isCreating, setIsCreating] = useState<boolean>(false);
+
+  // Edit task state
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
 
   useEffect(() => {
     if (tasks.length > 0 && selectedTaskId === null) {
@@ -26,7 +42,7 @@ export const DashboardScreen = ({ navigation }: any) => {
     }
   }, [tasks, selectedTaskId]);
 
-  const selectedTask = tasks.find(t => t.id === selectedTaskId) || tasks[0];
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
 
   const [mockLogs, setMockLogs] = useState<any[]>([]);
 
@@ -47,6 +63,19 @@ export const DashboardScreen = ({ navigation }: any) => {
       addTask(newTaskTitle);
       setNewTaskTitle('');
       setIsCreating(false);
+    }
+  };
+
+  const handleStartEdit = (task: Task) => {
+    setEditingTask(task);
+    setEditingTitle(task.title);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingTask && editingTitle.trim()) {
+      updateTask(editingTask.id, editingTitle.trim());
+      setEditingTask(null);
+      setEditingTitle('');
     }
   };
 
@@ -148,6 +177,7 @@ export const DashboardScreen = ({ navigation }: any) => {
             <TaskCard
               task={task}
               onDone={markDone}
+              onEdit={handleStartEdit}
               onDelete={deleteTask}
               isSelected={selectedTaskId === task.id}
             />
@@ -164,6 +194,43 @@ export const DashboardScreen = ({ navigation }: any) => {
           />
         )}
       </ScrollView>
+
+      {/* Edit Task Modal */}
+      <Modal
+        visible={editingTask !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingTask(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Habit Name</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editingTitle}
+              onChangeText={setEditingTitle}
+              placeholder="Habit title..."
+              placeholderTextColor="#71717a"
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setEditingTask(null)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveButton, !editingTitle.trim() && { opacity: 0.5 }]}
+                onPress={handleSaveEdit}
+                disabled={!editingTitle.trim()}
+              >
+                <Text style={styles.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -174,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#09090b',
   },
   container: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
   },
   topBar: {
@@ -182,10 +249,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    marginTop: 8,
   },
   appTitle: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
     color: '#ffffff',
     letterSpacing: -0.5,
@@ -193,6 +259,7 @@ const styles = StyleSheet.create({
   timezoneBadge: {
     fontSize: 12,
     color: '#a1a1aa',
+    fontWeight: '500',
     marginTop: 2,
   },
   topRight: {
@@ -301,5 +368,62 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#18181b',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 14,
+  },
+  modalInput: {
+    backgroundColor: '#27272a',
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#ffffff',
+    fontSize: 15,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalCancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#27272a',
+  },
+  modalCancelText: {
+    color: '#a1a1aa',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modalSaveButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: '#ea580c',
+  },
+  modalSaveText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
