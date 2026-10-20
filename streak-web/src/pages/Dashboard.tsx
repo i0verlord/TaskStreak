@@ -62,7 +62,6 @@ export const Dashboard: React.FC = () => {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
 
-  // Auto-dismiss bottom notice after 4 seconds
   useEffect(() => {
     if (!actionNotice) return;
     const timer = setTimeout(() => {
@@ -71,12 +70,10 @@ export const Dashboard: React.FC = () => {
     return () => clearTimeout(timer);
   }, [actionNotice]);
 
-  // Editing task state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTask, setIsUpdatingTask] = useState(false);
 
-  // Fetch Dashboard data from oRPC (Single user mode, stable dependencies)
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -126,7 +123,6 @@ export const Dashboard: React.FC = () => {
     try {
       const res = await orpc.tasks.log({ taskId: task.id });
 
-      // Trigger celebration confetti
       confetti({
         particleCount: 80,
         spread: 70,
@@ -136,7 +132,6 @@ export const Dashboard: React.FC = () => {
 
       setActionNotice(res.message);
     } catch (err: unknown) {
-      // Rollback on error
       const msg = getErrorMessage(err);
       setActionNotice(`⚠️ ${msg || 'Could not complete task'}`);
       fetchDashboardData();
@@ -182,7 +177,7 @@ export const Dashboard: React.FC = () => {
         prev.map((t) => (t.id === taskId ? { ...t, title: editingTitle.trim() } : t))
       );
       setEditingTaskId(null);
-      setActionNotice(`✏️ Renamed habit to "${editingTitle.trim()}"`);
+      setActionNotice(` Renamed to "${editingTitle.trim()}"`);
     } catch (err: unknown) {
       const msg = getErrorMessage(err);
       setActionNotice(`⚠️ ${msg || 'Failed to update habit'}`);
@@ -263,12 +258,9 @@ export const Dashboard: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-2xl font-black text-white tracking-tight">Active Habits</h2>
-                  <span className="px-2.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 text-xs font-bold border border-orange-500/20">
-                    {tasks.length} Habits
-                  </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Timezone-locked to {user?.timezone || 'Asia/Calcutta'} • Once per calendar day
+                  Making healthy habits everyday
                 </p>
               </div>
 
@@ -292,7 +284,7 @@ export const Dashboard: React.FC = () => {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="Enter a new habit to build (e.g. Read 20 pages, Morning 5km Run, LeetCode problem)..."
+                  placeholder="Add a new habit (e.g. Read 20 pages, Morning 5km Run, LeetCode problem)..."
                   className="flex-1 bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none px-2"
                 />
                 <button
@@ -325,12 +317,12 @@ export const Dashboard: React.FC = () => {
                 </div>
               ) : tasks.length === 0 ? (
                 <div className="text-center py-16 px-6 rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 backdrop-blur-sm max-w-lg mx-auto space-y-4 shadow-xl">
-                  <div className="w-24 h-24 mx-auto rounded-3xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-5xl shadow-inner select-none animate-bounce duration-1000">
+                  <div className="w-24 h-24 mx-auto rounded-3xl bg-slate-800/80 border border-slate-700/60 flex items-center justify-center text-5xl shadow-inner select-none">
                     🤔
                   </div>
                   <h4 className="text-lg font-bold text-white tracking-tight">No tasks here yet...</h4>
                   <p className="text-xs text-slate-400 mt-1.5 max-w-sm mx-auto leading-relaxed">
-                    Thinking about what habits to build today? Type a task title above and click "Add Habit" to kick off your streak!
+                    Let's start building healthy habits!
                   </p>
                 </div>
               ) : (

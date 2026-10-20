@@ -61,10 +61,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="text-sm font-bold text-white tracking-tight truncate max-w-[200px]">
                 {user?.name || 'User'}
               </div>
-              
             </div>
             <div className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wide">
-              Live
+              Logged In
             </div>
           </div>
         </div>
