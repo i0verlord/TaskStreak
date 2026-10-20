@@ -10,13 +10,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'taskstreak-secret-jwt-key-2026';
  */
 const authedProcedure = os.use(async ({ context, next }) => {
   let userId = context && context.userId;
+  let user = null;
 
-  // If no auth token provided in dev mode, fallback to default demo user
-  if (!userId) {
-    userId = '670000000000000000000001';
+  if (userId) {
+    user = await taskService.getUserById(userId);
   }
 
-  const user = await taskService.getUserById(userId);
+  // If no auth token provided or invalid, fallback to demo user for seamless local experience
+  if (!user) {
+    user = await taskService.getDefaultDemoUser();
+  }
+
   if (!user) {
     throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
   }
@@ -25,7 +29,7 @@ const authedProcedure = os.use(async ({ context, next }) => {
     context: {
       ...context,
       user,
-      userId: user._id.toString(),
+      userId: (user._id || user.id).toString(),
     },
   });
 });

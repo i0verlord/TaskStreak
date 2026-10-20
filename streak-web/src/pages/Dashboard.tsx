@@ -81,10 +81,13 @@ export const Dashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.warn('oRPC fetch error:', err?.message);
+      if (!tasks || tasks.length === 0) {
+        setActionNotice(`⚠️ Unable to reach API server (http://localhost:5000/rpc): ${err?.message || 'Check terminal'}`);
+      }
     } finally {
       setLoading(false);
     }
-  }, [selectedTaskId]);
+  }, [selectedTaskId, tasks]);
 
   useEffect(() => {
     fetchDashboardData();

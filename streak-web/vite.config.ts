@@ -7,10 +7,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(process.cwd(), './src'),
+      react: path.resolve(process.cwd(), './node_modules/react'),
+      'react-dom': path.resolve(process.cwd(), './node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
   },
   server: {
     port: 3000,
+    host: '0.0.0.0',
   },
 });

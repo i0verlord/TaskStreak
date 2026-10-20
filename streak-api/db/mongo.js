@@ -15,10 +15,11 @@ async function connectMongo() {
   try {
     console.log('🔄 [MongoDB] Connecting to MongoDB Atlas...');
     await mongoose.connect(uri, {
+      dbName: 'taskstreak',
       serverSelectionTimeoutMS: 5000,
     });
     isConnected = true;
-    console.log('✅ [MongoDB] Successfully connected to MongoDB Atlas!');
+    console.log('✅ [MongoDB] Successfully connected to MongoDB Atlas (db: taskstreak)!');
     return true;
   } catch (err) {
     console.warn('⚠️ [MongoDB] Could not connect to MongoDB Atlas:', err.message);

@@ -210,6 +210,29 @@ async function loginUser({ email, password }) {
 }
 
 /**
+ * Retrieves the default demo user (from MongoDB Atlas or mock store)
+ */
+async function getDefaultDemoUser() {
+  if (isMongoConnected()) {
+    try {
+      let user = await User.findOne({ email: 'alex@taskstreak.dev' });
+      if (!user) {
+        user = await User.findOne();
+      }
+      if (!user) {
+        await seedDefaultUserIfMongo();
+        user = await User.findOne({ email: 'alex@taskstreak.dev' });
+      }
+      return user ? sanitizeUser(user) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return mockUsers[0] ? sanitizeUser(mockUsers[0]) : null;
+}
+
+/**
  * Get user by ID
  */
 async function getUserById(id) {
@@ -577,6 +600,7 @@ function sanitizeUser(user) {
 
 module.exports = {
   seedDefaultUserIfMongo,
+  getDefaultDemoUser,
   registerUser,
   loginUser,
   getUserById,
