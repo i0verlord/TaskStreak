@@ -11,76 +11,18 @@ let mockUsers = [
   {
     _id: '670000000000000000000001',
     id: '670000000000000000000001',
-    email: 'alex@taskstreak.dev',
-    password: bcrypt.hashSync('password123', 8),
+    name: 'Admin',
+    email: 'admin@taskstreak.dev',
+    password: bcrypt.hashSync('admin123', 8),
     timezone: 'Asia/Calcutta',
-    streak_freezes_available: 2,
     expo_push_token: null,
     notification: 'enabled',
     createdAt: new Date('2026-01-01T00:00:00Z'),
   },
 ];
 
-let mockTasks = [
-  {
-    _id: '670000000000000000000011',
-    id: '670000000000000000000011',
-    userId: '670000000000000000000001',
-    title: 'Study Java & Data Structures',
-    current_streak: 14,
-    longest_streak: 21,
-    createdAt: new Date('2026-09-01T00:00:00Z'),
-  },
-  {
-    _id: '670000000000000000000012',
-    id: '670000000000000000000012',
-    userId: '670000000000000000000001',
-    title: 'Morning 5km Run',
-    current_streak: 5,
-    longest_streak: 12,
-    createdAt: new Date('2026-09-10T00:00:00Z'),
-  },
-  {
-    _id: '670000000000000000000013',
-    id: '670000000000000000000013',
-    userId: '670000000000000000000001',
-    title: 'Read 20 Pages',
-    current_streak: 0,
-    longest_streak: 8,
-    createdAt: new Date('2026-09-15T00:00:00Z'),
-  },
-];
-
-let mockTaskLogs = (() => {
-  const logs = [];
-  let logCounter = 1;
-  const now = new Date();
-
-  // 14 days consecutive logs for Task 1
-  for (let i = 1; i <= 14; i++) {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - i);
-    d.setUTCHours(14, 30, 0, 0); // 8:00 PM IST
-    logs.push({
-      _id: `log-${logCounter++}`,
-      taskId: '670000000000000000000011',
-      completed_at: d,
-    });
-  }
-
-  // Task 2: 5 days
-  for (let i = 1; i <= 5; i++) {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - i);
-    logs.push({
-      _id: `log-${logCounter++}`,
-      taskId: '670000000000000000000012',
-      completed_at: d,
-    });
-  }
-
-  return logs;
-})();
+let mockTasks = [];
+let mockTaskLogs = [];
 
 /**
  * Ensures the default demo user exists in MongoDB Atlas if connected
@@ -88,49 +30,29 @@ let mockTaskLogs = (() => {
 async function seedDefaultUserIfMongo() {
   if (!isMongoConnected()) return;
   try {
-    const existing = await User.findOne({ email: 'alex@taskstreak.dev' });
-    if (!existing) {
-      const hashedPassword = await bcrypt.hash('password123', 10);
-      const user = await User.create({
-        email: 'alex@taskstreak.dev',
+    let user = await User.findOne({
+      $or: [
+        { email: 'admin' },
+        { email: 'admin@taskstreak.dev' },
+        { email: 'alex@taskstreak.dev' },
+      ],
+    });
+
+    if (!user) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      user = await User.create({
+        name: 'Admin',
+        email: 'admin@taskstreak.dev',
         password: hashedPassword,
         timezone: 'Asia/Calcutta',
-        streak_freezes_available: 2,
         notification: 'enabled',
       });
-
-      // Seed 3 initial demo tasks
-      const t1 = await Task.create({
-        userId: user._id,
-        title: 'Study Java & Data Structures',
-        current_streak: 14,
-        longest_streak: 21,
-      });
-
-      const t2 = await Task.create({
-        userId: user._id,
-        title: 'Morning 5km Run',
-        current_streak: 5,
-        longest_streak: 12,
-      });
-
-      await Task.create({
-        userId: user._id,
-        title: 'Read 20 Pages',
-        current_streak: 0,
-        longest_streak: 8,
-      });
-
-      // Seed 14 days of logs for task 1
-      const now = new Date();
-      for (let i = 1; i <= 14; i++) {
-        const d = new Date(now);
-        d.setUTCDate(d.getUTCDate() - i);
-        d.setUTCHours(14, 30, 0, 0);
-        await TaskLog.create({ taskId: t1._id, completed_at: d });
-      }
-
-      console.log('✅ [MongoDB Seed] Initial demo user & tasks seeded.');
+      console.log('✅ [MongoDB Seed] Admin user created (password: admin123). 0 default tasks.');
+    } else {
+      user.name = 'Admin';
+      user.email = 'admin@taskstreak.dev';
+      user.password = await bcrypt.hash('admin123', 10);
+      await user.save();
     }
   } catch (err) {
     console.warn('[MongoDB Seed] Seed check completed:', err.message);
@@ -153,7 +75,6 @@ async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
       email: normalizedEmail,
       password: hashedPassword,
       timezone: timezone || 'Asia/Calcutta',
-      streak_freezes_available: 2,
       notification: 'enabled',
     });
     return sanitizeUser(user);
@@ -167,10 +88,10 @@ async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
   const newUser = {
     _id: `user-${Date.now()}`,
     id: `user-${Date.now()}`,
+    name: normalizedEmail.split('@')[0],
     email: normalizedEmail,
     password: bcrypt.hashSync(password, 8),
     timezone: timezone || 'Asia/Calcutta',
-    streak_freezes_available: 2,
     expo_push_token: null,
     notification: 'enabled',
     createdAt: new Date(),
@@ -180,13 +101,19 @@ async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
 }
 
 /**
- * Login user
+ * Login user (supports username 'admin' or email)
  */
 async function loginUser({ email, password }) {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedInput = email.trim().toLowerCase();
 
   if (isMongoConnected()) {
-    const user = await User.findOne({ email: normalizedEmail });
+    const user = await User.findOne({
+      $or: [
+        { email: normalizedInput },
+        { email: normalizedInput === 'admin' ? 'admin@taskstreak.dev' : normalizedInput },
+        { name: normalizedInput },
+      ],
+    });
     if (!user) {
       throw new Error('Invalid email or password.');
     }
@@ -198,7 +125,12 @@ async function loginUser({ email, password }) {
   }
 
   // Mock store
-  const user = mockUsers.find((u) => u.email === normalizedEmail);
+  const user = mockUsers.find(
+    (u) =>
+      u.email.toLowerCase() === normalizedInput ||
+      u.email.toLowerCase() === (normalizedInput === 'admin' ? 'admin@taskstreak.dev' : normalizedInput) ||
+      (u.name && u.name.toLowerCase() === normalizedInput)
+  );
   if (!user) {
     throw new Error('Invalid email or password.');
   }
@@ -215,21 +147,33 @@ async function loginUser({ email, password }) {
 async function getDefaultDemoUser() {
   if (isMongoConnected()) {
     try {
-      let user = await User.findOne({ email: 'alex@taskstreak.dev' });
+      let user = await User.findOne({
+        $or: [
+          { email: 'admin' },
+          { email: 'admin@taskstreak.dev' },
+          { name: 'Admin' },
+        ],
+      });
       if (!user) {
         user = await User.findOne();
       }
       if (!user) {
         await seedDefaultUserIfMongo();
-        user = await User.findOne({ email: 'alex@taskstreak.dev' });
+        user = await User.findOne({
+          $or: [
+            { email: 'admin' },
+            { email: 'admin@taskstreak.dev' },
+            { name: 'Admin' },
+          ],
+        });
       }
-      return user ? sanitizeUser(user) : null;
-    } catch {
-      return null;
+      if (user) return sanitizeUser(user);
+    } catch (e) {
+      console.warn('[getDefaultDemoUser] Atlas lookup error, falling back:', e.message);
     }
   }
 
-  return mockUsers[0] ? sanitizeUser(mockUsers[0]) : null;
+  return sanitizeUser(mockUsers[0]);
 }
 
 /**
@@ -278,7 +222,7 @@ async function updateUser(id, { timezone, expo_push_token, notification }) {
  * Get user's tasks with dynamic completion status based on user's timezone
  */
 async function getTasksForUser(userId) {
-  const user = await getUserById(userId);
+  const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
 
   const nowUtc = new Date();
@@ -346,7 +290,7 @@ async function getTasksForUser(userId) {
  * Create a new task for user
  */
 async function createTaskForUser(userId, title) {
-  const user = await getUserById(userId);
+  const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
 
   if (isMongoConnected()) {
@@ -389,7 +333,7 @@ async function createTaskForUser(userId, title) {
  * Rename/Edit a task for user
  */
 async function updateTaskForUser(userId, taskId, title) {
-  const user = await getUserById(userId);
+  const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
 
   if (isMongoConnected()) {
@@ -424,7 +368,7 @@ async function updateTaskForUser(userId, taskId, title) {
  * Delete a task and its logs from database
  */
 async function deleteTaskForUser(userId, taskId) {
-  const user = await getUserById(userId);
+  const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
 
   if (isMongoConnected()) {
@@ -450,7 +394,7 @@ async function deleteTaskForUser(userId, taskId) {
  * Log task completion with timezone validation and streak freeze deduction
  */
 async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
-  const user = await getUserById(userId);
+  const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
 
   const nowUtc = simulatedNowUtc ? new Date(simulatedNowUtc) : new Date();
@@ -468,19 +412,12 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
       currentStreak: task.current_streak,
       longestStreak: task.longest_streak,
       userTimezone: user.timezone,
-      streakFreezesAvailable: user.streak_freezes_available,
     });
 
     if (!evaluation.allowed) {
       const err = new Error(evaluation.reason);
       err.details = evaluation;
       throw err;
-    }
-
-    if (evaluation.usedFreeze) {
-      await User.findByIdAndUpdate(user._id, {
-        $inc: { streak_freezes_available: -1 },
-      });
     }
 
     await TaskLog.create({
@@ -504,9 +441,7 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
         is_locked: true,
       },
       evaluation,
-      message: evaluation.usedFreeze
-        ? `Freeze used! Your streak continues at ${evaluation.newStreak} days 🔥`
-        : `Streak updated to ${evaluation.newStreak} days! 🔥`,
+      message: `Streak updated to ${evaluation.newStreak} days! 🔥`,
     };
   }
 
@@ -525,20 +460,12 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
     currentStreak: task.current_streak,
     longestStreak: task.longest_streak,
     userTimezone: user.timezone,
-    streakFreezesAvailable: user.streak_freezes_available,
   });
 
   if (!evaluation.allowed) {
     const err = new Error(evaluation.reason);
     err.details = evaluation;
     throw err;
-  }
-
-  if (evaluation.usedFreeze) {
-    const targetUser = mockUsers.find((u) => u._id.toString() === user._id.toString());
-    if (targetUser && targetUser.streak_freezes_available > 0) {
-      targetUser.streak_freezes_available -= 1;
-    }
   }
 
   mockTaskLogs.unshift({
@@ -558,9 +485,7 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
       is_locked: true,
     },
     evaluation,
-    message: evaluation.usedFreeze
-      ? `Freeze used! Your streak continues at ${evaluation.newStreak} days 🔥`
-      : `Streak updated to ${evaluation.newStreak} days! 🔥`,
+    message: `Streak updated to ${evaluation.newStreak} days! 🔥`,
   };
 }
 
@@ -601,6 +526,7 @@ function sanitizeUser(user) {
 module.exports = {
   seedDefaultUserIfMongo,
   getDefaultDemoUser,
+  getSingleUser: getDefaultDemoUser,
   registerUser,
   loginUser,
   getUserById,

@@ -24,10 +24,12 @@ const TIMEZONES = [
 export const SettingsScreen = ({ route, navigation }: any) => {
   const initialUser = route.params?.user || {
     id: '670000000000000000000001',
+    name: 'Admin',
+    email: 'admin@taskstreak.dev',
     timezone: 'Asia/Calcutta',
-    streak_freezes_available: 2,
     notification: 'enabled',
   };
+
 
   const [selectedTz, setSelectedTz] = useState(initialUser.timezone || 'Asia/Calcutta');
   const [notificationEnabled, setNotificationEnabled] = useState(
@@ -133,20 +135,6 @@ export const SettingsScreen = ({ route, navigation }: any) => {
             })}
           </View>
         </View>
-
-        {/* 3. Streak Freezes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeader}>Streak Protection</Text>
-          <View style={styles.freezeInfoCard}>
-            <Text style={styles.freezeCardTitle}>❄️ Streak Freezes</Text>
-            <Text style={styles.freezeCardCount}>
-              {initialUser.streak_freezes_available ?? 2} Freezes Available
-            </Text>
-            <Text style={styles.freezeCardDesc}>
-              If you miss a single day, an available freeze will automatically save your streak counter from resetting to zero.
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -250,28 +238,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
-  freezeInfoCard: {
-    backgroundColor: '#082f49',
-    borderColor: '#0284c7',
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-  },
-  freezeCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#e0f2fe',
-  },
-  freezeCardCount: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#38bdf8',
-    marginTop: 4,
-  },
-  freezeCardDesc: {
-    fontSize: 12,
-    color: '#bae6fd',
-    marginTop: 6,
-    lineHeight: 16,
-  },
 });
+

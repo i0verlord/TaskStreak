@@ -65,10 +65,47 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 3. Fallback REST compatibility routes (convenience for curl / postman / legacy clients)
+// Helper to resolve user ID from query, body, Bearer auth token, or single user default
+async function resolveUserId(req) {
+  let userId = req.query?.userId || req.body?.userId;
+  const authHeader = req.headers?.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET);
+      userId = decoded.userId;
+    } catch {}
+  }
+  if (!userId || userId === 'guest') {
+    const singleUser = await taskService.getSingleUser();
+    userId = (singleUser._id || singleUser.id).toString();
+  }
+  return userId;
+}
+
+// 3. Fallback REST compatibility routes (convenience for curl / mobile / legacy clients)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const user = await taskService.getSingleUser();
+    const token = 'single-user-token';
+    res.json({ token, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const user = await taskService.getSingleUser();
+    const token = 'single-user-token';
+    res.json({ token, user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/tasks', async (req, res) => {
   try {
-    const userId = req.query.userId || '670000000000000000000001';
+    const userId = await resolveUserId(req);
     const result = await taskService.getTasksForUser(userId);
     res.json(result);
   } catch (err) {
@@ -78,7 +115,7 @@ app.get('/api/tasks', async (req, res) => {
 
 app.post('/api/tasks', async (req, res) => {
   try {
-    const userId = req.body.userId || '670000000000000000000001';
+    const userId = await resolveUserId(req);
     const task = await taskService.createTaskForUser(userId, req.body.title);
     res.status(201).json({ task });
   } catch (err) {
@@ -88,7 +125,7 @@ app.post('/api/tasks', async (req, res) => {
 
 app.put('/api/tasks/:id', async (req, res) => {
   try {
-    const userId = req.body.userId || '670000000000000000000001';
+    const userId = await resolveUserId(req);
     const task = await taskService.updateTaskForUser(userId, req.params.id, req.body.title);
     res.json({ task });
   } catch (err) {
@@ -98,7 +135,7 @@ app.put('/api/tasks/:id', async (req, res) => {
 
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
-    const userId = req.query.userId || req.body.userId || '670000000000000000000001';
+    const userId = await resolveUserId(req);
     const result = await taskService.deleteTaskForUser(userId, req.params.id);
     res.json(result);
   } catch (err) {
@@ -108,7 +145,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
 app.post('/api/tasks/:id/log', async (req, res) => {
   try {
-    const userId = req.body.userId || '670000000000000000000001';
+    const userId = await resolveUserId(req);
     const result = await taskService.logTaskCompletion(
       userId,
       req.params.id,
@@ -123,6 +160,7 @@ app.post('/api/tasks/:id/log', async (req, res) => {
     });
   }
 });
+
 
 app.get('/api/tasks/:id/logs', async (req, res) => {
   try {

@@ -16,13 +16,8 @@ const authedProcedure = os.use(async ({ context, next }) => {
     user = await taskService.getUserById(userId);
   }
 
-  // If no auth token provided or invalid, fallback to demo user for seamless local experience
   if (!user) {
-    user = await taskService.getDefaultDemoUser();
-  }
-
-  if (!user) {
-    throw new ORPCError('UNAUTHORIZED', { message: 'Authentication required' });
+    user = await taskService.getSingleUser();
   }
 
   return next({
@@ -70,7 +65,7 @@ const appRouter = {
     login: publicProcedure
       .input(
         z.object({
-          email: z.string().email(),
+          email: z.string().min(1, 'Username or email required'),
           password: z.string(),
         })
       )

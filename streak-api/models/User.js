@@ -9,6 +9,11 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    name: {
+      type: String,
+      default: 'Admin',
+      trim: true,
+    },
     password: {
       type: String,
       required: true,
@@ -16,11 +21,6 @@ const userSchema = new mongoose.Schema(
     timezone: {
       type: String,
       default: 'Asia/Calcutta',
-    },
-    streak_freezes_available: {
-      type: Number,
-      default: 2,
-      min: 0,
     },
     expo_push_token: {
       type: String,

@@ -38,8 +38,7 @@ function getLocalDateString(date, timeZone = 'UTC') {
  * @param {number} options.currentStreak Current streak count of the task
  * @param {number} options.longestStreak Longest streak count recorded for the task
  * @param {string} options.userTimezone User's IANA timezone
- * @param {number} options.streakFreezesAvailable Number of streak freezes user currently has
- * @returns {Object} Result { allowed: boolean, reason?: string, newStreak: number, newLongestStreak: number, usedFreeze: boolean, remainingFreezes: number }
+ * @returns {Object} Result { allowed: boolean, reason?: string, newStreak: number, newLongestStreak: number }
  */
 function evaluateStreak({
   nowUtc = new Date(),
@@ -47,7 +46,6 @@ function evaluateStreak({
   currentStreak = 0,
   longestStreak = 0,
   userTimezone = 'UTC',
-  streakFreezesAvailable = 0,
 }) {
   const todayLocalDateStr = getLocalDateString(nowUtc, userTimezone);
 
@@ -62,8 +60,6 @@ function evaluateStreak({
       lastLocalDate: null,
       newStreak,
       newLongestStreak: Math.max(longestStreak, newStreak),
-      usedFreeze: false,
-      remainingFreezes: streakFreezesAvailable,
     };
   }
 
@@ -83,8 +79,6 @@ function evaluateStreak({
       lastLocalDate: lastLocalDateStr,
       newStreak: currentStreak,
       newLongestStreak: longestStreak,
-      usedFreeze: false,
-      remainingFreezes: streakFreezesAvailable,
     };
   }
 
@@ -99,28 +93,10 @@ function evaluateStreak({
       lastLocalDate: lastLocalDateStr,
       newStreak,
       newLongestStreak: Math.max(longestStreak, newStreak),
-      usedFreeze: false,
-      remainingFreezes: streakFreezesAvailable,
     };
   }
 
-  // Difference = 2: Missed exactly one day. Check if user has a streak freeze.
-  if (diffDays === 2 && streakFreezesAvailable > 0) {
-    const newStreak = currentStreak + 1;
-    return {
-      allowed: true,
-      reason: 'Streak freeze saved the streak after 1 missed day',
-      differenceInDays: diffDays,
-      todayLocalDate: todayLocalDateStr,
-      lastLocalDate: lastLocalDateStr,
-      newStreak,
-      newLongestStreak: Math.max(longestStreak, newStreak),
-      usedFreeze: true,
-      remainingFreezes: streakFreezesAvailable - 1,
-    };
-  }
-
-  // Difference > 1 (and no freeze applied): Streak broke, resets to 1
+  // Difference > 1: Streak broke, resets to 1
   const newStreak = 1;
   return {
     allowed: true,
@@ -130,8 +106,6 @@ function evaluateStreak({
     lastLocalDate: lastLocalDateStr,
     newStreak,
     newLongestStreak: Math.max(longestStreak, newStreak),
-    usedFreeze: false,
-    remainingFreezes: streakFreezesAvailable,
   };
 }
 

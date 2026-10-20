@@ -1,13 +1,9 @@
 import React from 'react';
-import { 
-  Flame, 
-  Snowflake, 
-  Globe, 
-  LogOut, 
-  LogIn, 
-  UserCheck, 
-  CheckCircle2, 
-  Layers, 
+import {
+  Flame,
+  Globe,
+  CheckCircle2,
+  Layers,
   BellRing,
   BellOff
 } from 'lucide-react';
@@ -15,9 +11,9 @@ import {
 interface User {
   id?: string;
   _id?: string;
+  name?: string;
   email: string;
   timezone: string;
-  streak_freezes_available: number;
   notification?: string;
 }
 
@@ -28,8 +24,6 @@ interface SidebarProps {
   timezones: string[];
   selectedTimezone: string;
   onTimezoneChange: (tz: string) => void;
-  onOpenAuth: () => void;
-  onLogout: () => void;
   onToggleNotification: () => void;
 }
 
@@ -40,8 +34,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   timezones,
   selectedTimezone,
   onTimezoneChange,
-  onOpenAuth,
-  onLogout,
   onToggleNotification,
 }) => {
   const isNotificationEnabled = user?.notification !== 'disabled';
@@ -53,64 +45,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Branding */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <Flame className="w-6 h-6 text-white animate-pulse" />
+            <Flame className="w-6 h-6 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
               TaskStreak
-              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                PRO
-              </span>
             </h1>
-            <p className="text-xs text-slate-400">Cheat-proof habit tracker</p>
           </div>
         </div>
 
-        {/* Profile Card (At Top) */}
+        {/* Profile Card */}
         <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shadow-md">
-                {user?.email ? user.email[0].toUpperCase() : 'G'}
+          <div className="flex items-center justify-between">
+            <div className="overflow-hidden">
+              <div className="text-sm font-bold text-white tracking-tight truncate max-w-[200px]">
+                {user?.name || 'User'}
               </div>
-              <div className="overflow-hidden">
-                <div className="text-sm font-semibold text-white truncate max-w-[130px]">
-                  {user?.email ? user.email.split('@')[0] : 'Guest User'}
-                </div>
-                <div className="text-[11px] text-slate-400 truncate max-w-[130px]">
-                  {user?.email || 'Demo Session'}
-                </div>
-              </div>
+              
             </div>
-
-            {user?.email ? (
-              <button
-                onClick={onLogout}
-                title="Log Out"
-                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                onClick={onOpenAuth}
-                title="Sign In"
-                className="p-1.5 text-orange-400 hover:text-orange-300 hover:bg-slate-700/50 rounded-lg transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Freeze Counter Badge */}
-          <div className="flex items-center justify-between bg-slate-900/80 rounded-xl px-3 py-2 border border-slate-700/40">
-            <div className="flex items-center gap-1.5">
-              <Snowflake className="w-4 h-4 text-sky-400" />
-              <span className="text-xs text-slate-300 font-medium">Streak Freezes</span>
+            <div className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-wide">
+              Live
             </div>
-            <span className="text-xs font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
-              {user?.streak_freezes_available ?? 2} Available
-            </span>
           </div>
         </div>
 
@@ -194,28 +149,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <button
             onClick={onToggleNotification}
-            className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
-              isNotificationEnabled ? 'bg-orange-600' : 'bg-slate-700'
-            }`}
+            className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${isNotificationEnabled ? 'bg-orange-600' : 'bg-slate-700'
+              }`}
           >
             <div
-              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                isNotificationEnabled ? 'translate-x-5' : 'translate-x-0'
-              }`}
+              className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isNotificationEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
             />
           </button>
         </div>
-
-        {/* Account Action */}
-        {!user?.email && (
-          <button
-            onClick={onOpenAuth}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-orange-600/90 hover:bg-orange-500 text-white font-medium text-xs shadow-md transition-colors"
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            Sign In / Register
-          </button>
-        )}
       </div>
     </aside>
   );

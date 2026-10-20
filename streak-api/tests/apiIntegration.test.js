@@ -16,18 +16,28 @@ async function runIntegrationTests() {
     assert.strictEqual(healthData.status, 'ok');
     console.log('✓ [GET /health] Server is responsive and healthy.');
 
-    // 2. GET /api/tasks?userId=1
-    const tasksRes = await fetch(`${BASE_URL}/api/tasks?userId=1`);
+    // 2. GET /api/tasks (verify clean array)
+    const tasksRes = await fetch(`${BASE_URL}/api/tasks`);
     assert.strictEqual(tasksRes.status, 200);
     const tasksData = await tasksRes.json();
     assert.ok(Array.isArray(tasksData.tasks), 'tasks should be an array');
-    const task1 = tasksData.tasks.find((t) => t.id === 1);
-    assert.ok(task1, 'Task 1 must exist');
-    console.log(`✓ [GET /api/tasks] Fetched ${tasksData.tasks.length} tasks. Task 1 streak: ${task1.current_streak}`);
+    console.log(`✓ [GET /api/tasks] Successfully fetched tasks. Count: ${tasksData.tasks.length}`);
 
-    // 3. POST /api/tasks/1/log (Click "Done" today)
-    console.log('\n--- Test Scenario A: Click Done today (Valid continuation) ---');
-    const doneRes1 = await fetch(`${BASE_URL}/api/tasks/1/log`, {
+    // 3. POST /api/tasks (Create a new task)
+    const createRes = await fetch(`${BASE_URL}/api/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Test Daily Habit' }),
+    });
+    assert.strictEqual(createRes.status, 201);
+    const createData = await createRes.json();
+    const testTaskId = createData.task.id;
+    assert.ok(testTaskId, 'Created task must have an ID');
+    console.log(`✓ [POST /api/tasks] Created dynamic task: "${createData.task.title}" (ID: ${testTaskId})`);
+
+    // 4. POST /api/tasks/:id/log (Click "Done" today)
+    console.log('\n--- Test Scenario A: Click Done today (Valid completion) ---');
+    const doneRes1 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -37,11 +47,12 @@ async function runIntegrationTests() {
     assert.strictEqual(doneData1.success, true);
     assert.strictEqual(doneData1.task.completed_today, true);
     assert.strictEqual(doneData1.task.is_locked, true);
-    console.log(`✓ [POST /api/tasks/1/log] Succeeded: ${doneData1.message} (Streak: ${doneData1.task.current_streak})`);
+    assert.strictEqual(doneData1.task.current_streak, 1);
+    console.log(`✓ [POST /api/tasks/:id/log] Succeeded: ${doneData1.message} (Streak: ${doneData1.task.current_streak})`);
 
-    // 4. POST /api/tasks/1/log again today (MUST BLOCK)
+    // 5. POST /api/tasks/:id/log again today (MUST BLOCK)
     console.log('\n--- Test Scenario B: Click Done again on SAME day (MUST BLOCK) ---');
-    const doneRes2 = await fetch(`${BASE_URL}/api/tasks/1/log`, {
+    const doneRes2 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -50,14 +61,14 @@ async function runIntegrationTests() {
     assert.strictEqual(doneRes2.status, 400);
     assert.strictEqual(doneData2.success, false);
     assert.match(doneData2.error, /already completed today/i);
-    console.log(`✓ [POST /api/tasks/1/log] Successfully BLOCKED with 400 Bad Request: "${doneData2.error}"`);
+    console.log(`✓ [POST /api/tasks/:id/log] Successfully BLOCKED with 400 Bad Request: "${doneData2.error}"`);
 
-    // 5. POST /api/tasks/1/log (Simulate NEXT DAY in user timezone)
+    // 6. POST /api/tasks/:id/log (Simulate NEXT DAY in user timezone)
     console.log('\n--- Test Scenario C: Simulate clicking Done NEXT DAY (MUST INCREMENT) ---');
     const tomorrowUtc = new Date();
     tomorrowUtc.setUTCDate(tomorrowUtc.getUTCDate() + 1);
 
-    const doneRes3 = await fetch(`${BASE_URL}/api/tasks/1/log`, {
+    const doneRes3 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ simulatedNowUtc: tomorrowUtc.toISOString() }),
@@ -65,31 +76,15 @@ async function runIntegrationTests() {
     const doneData3 = await doneRes3.json();
     assert.strictEqual(doneRes3.status, 200);
     assert.strictEqual(doneData3.success, true);
-    assert.strictEqual(doneData3.evaluation.differenceInDays, 1);
-    console.log(`✓ [POST /api/tasks/1/log] Next day accepted: ${doneData3.message} (New streak: ${doneData3.task.current_streak})`);
+    assert.strictEqual(doneData3.task.current_streak, 2);
+    console.log(`✓ [POST /api/tasks/:id/log] Next day accepted: ${doneData3.message} (New streak: ${doneData3.task.current_streak})`);
 
-    // 6. POST /api/tasks/1/log (Simulate 1 MISSED DAY with Streak Freeze available)
-    console.log('\n--- Test Scenario D: Simulate 1 MISSED DAY with Streak Freeze (MUST SAVE STREAK) ---');
-    const afterTomorrowPlusOneUtc = new Date(tomorrowUtc);
-    afterTomorrowPlusOneUtc.setUTCDate(afterTomorrowPlusOneUtc.getUTCDate() + 2); // Diff = 2 days (missed 1)
-
-    const doneRes4 = await fetch(`${BASE_URL}/api/tasks/1/log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ simulatedNowUtc: afterTomorrowPlusOneUtc.toISOString() }),
-    });
-    const doneData4 = await doneRes4.json();
-    assert.strictEqual(doneRes4.status, 200);
-    assert.strictEqual(doneData4.success, true);
-    assert.strictEqual(doneData4.evaluation.usedFreeze, true);
-    console.log(`✓ [POST /api/tasks/1/log] Streak Freeze deployed: ${doneData4.message} (Streak preserved at: ${doneData4.task.current_streak})`);
-
-    // 7. POST /api/tasks/1/log (Simulate 4 MISSED DAYS without freeze -> Streak breaks)
-    console.log('\n--- Test Scenario E: Simulate 4 MISSED DAYS (MUST BREAK & RESET TO 1) ---');
-    const fourDaysLaterUtc = new Date(afterTomorrowPlusOneUtc);
+    // 7. POST /api/tasks/:id/log (Simulate 3 MISSED DAYS -> Reset to 1, preserve longest streak)
+    console.log('\n--- Test Scenario D: Simulate 3 MISSED DAYS (MUST RESET TO 1) ---');
+    const fourDaysLaterUtc = new Date(tomorrowUtc);
     fourDaysLaterUtc.setUTCDate(fourDaysLaterUtc.getUTCDate() + 4);
 
-    const doneRes5 = await fetch(`${BASE_URL}/api/tasks/1/log`, {
+    const doneRes5 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ simulatedNowUtc: fourDaysLaterUtc.toISOString() }),
@@ -98,19 +93,27 @@ async function runIntegrationTests() {
     assert.strictEqual(doneRes5.status, 200);
     assert.strictEqual(doneData5.success, true);
     assert.strictEqual(doneData5.task.current_streak, 1);
-    assert.ok(doneData5.task.longest_streak >= 15, 'Longest streak must be retained');
-    console.log(`✓ [POST /api/tasks/1/log] Broken streak reset to 1. All-time longest streak preserved: ${doneData5.task.longest_streak}`);
+    assert.strictEqual(doneData5.task.longest_streak, 2);
+    console.log(`✓ [POST /api/tasks/:id/log] Broken streak reset to 1. Longest streak preserved: ${doneData5.task.longest_streak}`);
 
-    // 8. GET /api/tasks/1/logs (Verify Heatmap Logs)
-    console.log('\n--- Test Scenario F: Verify Immutable Task Logs (Heatmap Data) ---');
-    const logsRes = await fetch(`${BASE_URL}/api/tasks/1/logs`);
+    // 8. GET /api/tasks/:id/logs (Verify Immutable Task Logs)
+    console.log('\n--- Test Scenario E: Verify Immutable Task Logs ---');
+    const logsRes = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/logs`);
     assert.strictEqual(logsRes.status, 200);
     const logsData = await logsRes.json();
     assert.ok(Array.isArray(logsData.logs));
-    assert.ok(logsData.logs.length >= 10, 'Should have recorded logs');
-    console.log(`✓ [GET /api/tasks/1/logs] Found ${logsData.logs.length} immutable UTC completion records for Heatmap.`);
+    assert.ok(logsData.logs.length >= 3, 'Should have recorded 3 completions');
+    console.log(`✓ [GET /api/tasks/:id/logs] Found ${logsData.logs.length} immutable UTC completion records.`);
 
-    console.log('\n🎉 ALL PHASE 1 INTEGRATION & POSTMAN SIMULATION TESTS PASSED!\n');
+    // 9. DELETE /api/tasks/:id
+    console.log('\n--- Test Scenario F: Delete Task ---');
+    const delRes = await fetch(`${BASE_URL}/api/tasks/${testTaskId}`, {
+      method: 'DELETE',
+    });
+    assert.strictEqual(delRes.status, 200);
+    console.log('✓ [DELETE /api/tasks/:id] Task permanently deleted.');
+
+    console.log('\n🎉 ALL PHASE 1 INTEGRATION TESTS PASSED PERFECTLY!\n');
     server.close(() => {
       process.exit(0);
     });

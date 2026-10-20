@@ -65,7 +65,7 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
   console.log('✓ Consecutive day completion increments streak from 14 to 15');
 }
 
-// 5. Missed 1 day with Streak Freeze available (Difference = 2 days) -> Streak saved!
+// 5. Missed 1 day (Difference = 2 days) -> Resets to 1 while preserving longest streak
 {
   const result = evaluateStreak({
     nowUtc: new Date('2026-10-07T10:00:00Z'),
@@ -73,32 +73,12 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
     currentStreak: 10,
     longestStreak: 10,
     userTimezone: 'Asia/Calcutta',
-    streakFreezesAvailable: 1,
   });
 
   assert.strictEqual(result.allowed, true);
-  assert.strictEqual(result.usedFreeze, true);
-  assert.strictEqual(result.remainingFreezes, 0);
-  assert.strictEqual(result.newStreak, 11);
-  console.log('✓ Streak Freeze saved 10-day streak after missing 1 day -> streak is 11');
-}
-
-// 6. Missed 1 day without Streak Freeze (Difference = 2 days) -> Resets to 1
-{
-  const result = evaluateStreak({
-    nowUtc: new Date('2026-10-07T10:00:00Z'),
-    lastCompletedAtUtc: new Date('2026-10-05T10:00:00Z'),
-    currentStreak: 10,
-    longestStreak: 10,
-    userTimezone: 'Asia/Calcutta',
-    streakFreezesAvailable: 0,
-  });
-
-  assert.strictEqual(result.allowed, true);
-  assert.strictEqual(result.usedFreeze, false);
   assert.strictEqual(result.newStreak, 1);
   assert.strictEqual(result.newLongestStreak, 10);
-  console.log('✓ Missed day without freeze resets streak to 1 while preserving longest streak (10)');
+  console.log('✓ Missed day resets streak to 1 while preserving longest streak (10)');
 }
 
 console.log('\n🎉 All Streak Engine Unit Tests Passed Successfully!\n');

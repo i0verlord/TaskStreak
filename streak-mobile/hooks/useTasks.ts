@@ -17,9 +17,9 @@ export interface Task {
 export interface User {
   id: number | string;
   _id?: string;
+  name?: string;
   email: string;
   timezone: string;
-  streak_freezes_available: number;
   expo_push_token?: string | null;
   notification?: 'enabled' | 'disabled';
 }
@@ -28,22 +28,22 @@ export interface User {
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 export const API_BASE_URL = `http://${DEFAULT_HOST}:5000/api`;
 
-export function useTasks(userId: number | string = '670000000000000000000001') {
+export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [user, setUser] = useState<User>({
-    id: userId,
-    email: 'alex@taskstreak.dev',
+  const [user, setUser] = useState<User | null>({
+    id: '6ad73b45cdecdb457e0973f9',
+    name: 'Admin',
+    email: 'admin@taskstreak.dev',
     timezone: 'Asia/Calcutta',
-    streak_freezes_available: 2,
     notification: 'enabled',
   });
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/tasks?userId=${userId}`);
+      const res = await fetch(`${API_BASE_URL}/tasks`);
       if (!res.ok) throw new Error('API unreachable');
       const data = await res.json();
       setTasks(data.tasks || []);
@@ -53,15 +53,17 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
 
+
+
   // Optimistic UI Update for clicking "Done"
   const markDone = async (task: Task) => {
-    if (task.completed_today || task.is_locked) {
+    if (task.completed_today || task.is_locked || !user) {
       return;
     }
 
@@ -103,7 +105,7 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
   };
 
   const addTask = async (title: string) => {
-    if (!title.trim()) return;
+    if (!title.trim() || !user) return;
 
     const newTask: Task = {
       id: Date.now().toString(),
@@ -138,7 +140,7 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
   };
 
   const updateTask = async (taskId: number | string, newTitle: string) => {
-    if (!newTitle.trim()) return;
+    if (!newTitle.trim() || !user) return;
 
     setTasks((current) =>
       current.map((t) => (t.id === taskId ? { ...t, title: newTitle.trim() } : t))
@@ -159,6 +161,7 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
   };
 
   const deleteTask = async (taskId: number | string) => {
+    if (!user) return;
     const prevTasks = [...tasks];
     setTasks((current) => current.filter((t) => t.id !== taskId));
 
@@ -180,7 +183,8 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
   };
 
   const updateUserSetting = async (updates: Partial<User>) => {
-    setUser((prev) => ({ ...prev, ...updates }));
+    if (!user) return;
+    setUser((prev) => (prev ? { ...prev, ...updates } : null));
 
     try {
       await fetch(`${API_BASE_URL}/users/${user.id}`, {
@@ -206,3 +210,4 @@ export function useTasks(userId: number | string = '670000000000000000000001') {
     updateUserSetting,
   };
 }
+
