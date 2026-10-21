@@ -82,7 +82,6 @@ export const SettingsScreen = ({ route, navigation }: any) => {
           <Text style={styles.title}>Settings</Text>
         </View>
 
-        {/* 1. Push Notification Toggle Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Push Notifications</Text>
           <Text style={styles.sectionDesc}>
@@ -110,7 +109,6 @@ export const SettingsScreen = ({ route, navigation }: any) => {
           </View>
         </View>
 
-        {/* 2. Timezone Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Timezone Synchronization</Text>
           <Text style={styles.sectionDesc}>

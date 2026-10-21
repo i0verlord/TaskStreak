@@ -27,11 +27,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const isLocked = task.completed_today || task.is_locked;
 
-  // Reanimated shared values for bouncing fire emoji
   const fireScale = useSharedValue(1);
   const fireRotate = useSharedValue(0);
 
-  // Trigger bounce animation when current_streak changes
   useEffect(() => {
     if (task.current_streak > 0) {
       fireScale.value = withSequence(
@@ -58,7 +56,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <View style={[styles.cardWrapper, isSelected && styles.cardWrapperSelected]}>
       <View style={[styles.card, isLocked && styles.cardLocked]}>
-        {/* Header Info */}
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -66,7 +63,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 {task.title}
               </Text>
 
-              {/* Edit Button */}
               {onEdit && (
                 <TouchableOpacity
                   onPress={() => onEdit(task)}
@@ -77,7 +73,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 </TouchableOpacity>
               )}
 
-              {/* Delete Button */}
               {onDelete && (
                 <TouchableOpacity
                   onPress={() => onDelete(task.id)}
@@ -94,7 +89,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Text>
           </View>
 
-          {/* Animated Fire Emoji Badge */}
           <View style={styles.fireBadge}>
             <Animated.Text style={[styles.fireEmoji, animatedFireStyle]}>
               🔥
@@ -103,7 +97,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </View>
         </View>
 
-        {/* Action Footer */}
         <View style={styles.footer}>
           <View>
             <Text style={styles.statusLabel}>
@@ -114,7 +107,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </Text>
           </View>
 
-          {/* Large Circular "Done" Button */}
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() => onDone(task)}

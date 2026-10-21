@@ -1,12 +1,5 @@
 const { parseISO, differenceInCalendarDays } = require('date-fns');
 
-/**
- * Returns YYYY-MM-DD string for a given Date/UTC string in the user's IANA timezone.
- * Uses native Intl.DateTimeFormat for accuracy across all standard timezones.
- * @param {Date|string} date
- * @param {string} timeZone e.g., 'Asia/Calcutta', 'America/New_York', 'UTC'
- * @returns {string} 'YYYY-MM-DD'
- */
 function getLocalDateString(date, timeZone = 'UTC') {
   const d = typeof date === 'string' ? new Date(date) : date;
   try {
@@ -18,7 +11,6 @@ function getLocalDateString(date, timeZone = 'UTC') {
     });
     return formatter.format(d);
   } catch (err) {
-    // Fallback to UTC if timezone is invalid
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'UTC',
       year: 'numeric',
@@ -29,17 +21,6 @@ function getLocalDateString(date, timeZone = 'UTC') {
   }
 }
 
-/**
- * Evaluates the new streak count when a user marks a task as Done.
- * 
- * @param {Object} options
- * @param {Date|string} options.nowUtc Current UTC time
- * @param {Date|string|null} options.lastCompletedAtUtc UTC timestamp of the most recent log
- * @param {number} options.currentStreak Current streak count of the task
- * @param {number} options.longestStreak Longest streak count recorded for the task
- * @param {string} options.userTimezone User's IANA timezone
- * @returns {Object} Result { allowed: boolean, reason?: string, newStreak: number, newLongestStreak: number }
- */
 function evaluateStreak({
   nowUtc = new Date(),
   lastCompletedAtUtc,
@@ -49,7 +30,6 @@ function evaluateStreak({
 }) {
   const todayLocalDateStr = getLocalDateString(nowUtc, userTimezone);
 
-  // If no prior logs, this is day 1
   if (!lastCompletedAtUtc) {
     const newStreak = 1;
     return {
@@ -69,7 +49,6 @@ function evaluateStreak({
     parseISO(lastLocalDateStr)
   );
 
-  // Difference = 0: Same day in local timezone -> Action locked
   if (diffDays === 0) {
     return {
       allowed: false,
@@ -82,7 +61,6 @@ function evaluateStreak({
     };
   }
 
-  // Difference = 1: Yesterday -> Valid streak continuation
   if (diffDays === 1) {
     const newStreak = currentStreak + 1;
     return {
@@ -96,7 +74,6 @@ function evaluateStreak({
     };
   }
 
-  // Difference > 1: Streak broke, resets to 1
   const newStreak = 1;
   return {
     allowed: true,

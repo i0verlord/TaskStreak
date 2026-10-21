@@ -34,7 +34,6 @@ export const DashboardScreen = ({ navigation }: any) => {
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
-  // Edit task state
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>('');
 
@@ -77,7 +76,6 @@ export const DashboardScreen = ({ navigation }: any) => {
           />
         }
       >
-        {/* Top Status Bar (App Branding + Settings Button) */}
         <View style={styles.topBar}>
           <View>
             <Text style={styles.appTitle}>TaskStreak <Text style={{ fontSize: 22 }}>💪</Text></Text>
@@ -94,7 +92,6 @@ export const DashboardScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        {/* Section Header */}
             <View style={styles.sectionHeaderRow}>
               <View>
                 <Text style={styles.sectionTitle}>Active Habits</Text>
@@ -112,7 +109,6 @@ export const DashboardScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* Create Task Form */}
             {isCreating && (
               <View style={styles.createTaskContainer}>
                 <TextInput
@@ -134,7 +130,6 @@ export const DashboardScreen = ({ navigation }: any) => {
               </View>
             )}
 
-            {/* 0 Tasks: Thinking Emoji Graphic State */}
             {tasks.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <View style={styles.thinkingEmojiContainer}>
@@ -165,7 +160,6 @@ export const DashboardScreen = ({ navigation }: any) => {
       </ScrollView>
 
 
-      {/* Edit Task Modal */}
       <Modal
         visible={editingTask !== null}
         transparent
@@ -202,7 +196,6 @@ export const DashboardScreen = ({ navigation }: any) => {
         </View>
       </Modal>
 
-      {/* Side Navigation Drawer (Settings Modal) */}
       <SidebarDrawer
         visible={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

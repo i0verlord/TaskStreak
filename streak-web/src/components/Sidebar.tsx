@@ -40,9 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="w-72 flex-shrink-0 bg-slate-900/95 border-r border-slate-800/80 flex flex-col justify-between h-screen sticky top-0 p-5 shadow-2xl backdrop-blur-xl z-20">
-      {/* Top: App Branding & User Profile */}
       <div className="space-y-6">
-        {/* Branding */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
             <Flame className="w-6 h-6 text-white" />
@@ -54,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Profile Card */}
         <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="overflow-hidden">
@@ -68,7 +65,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Navigation Section */}
         <div className="space-y-1">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-3 mb-2">
             Overview
@@ -96,13 +92,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom: Settings Section (Pinned to bottom) */}
       <div className="pt-6 border-t border-slate-800/80 space-y-4">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-1">
           Settings
         </div>
 
-        {/* Timezone Selector */}
         <div className="space-y-1.5">
           <label className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5 text-slate-400" />
@@ -131,7 +125,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </p>
         </div>
 
-        {/* 8:00 PM Notifications Setting Toggle */}
         <div className="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isNotificationEnabled ? (

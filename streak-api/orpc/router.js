@@ -5,9 +5,6 @@ const taskService = require('../services/taskService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'taskstreak-secret-jwt-key-2026';
 
-/**
- * Base procedure that requires or infers authenticated user
- */
 const authedProcedure = os.use(async ({ context, next }) => {
   let userId = context && context.userId;
   let user = null;
@@ -29,16 +26,9 @@ const authedProcedure = os.use(async ({ context, next }) => {
   });
 });
 
-/**
- * Public procedure
- */
 const publicProcedure = os;
 
-/**
- * oRPC Router Definition
- */
 const appRouter = {
-  // 1. Auth routes
   auth: {
     register: publicProcedure
       .input(
@@ -90,7 +80,6 @@ const appRouter = {
       }),
   },
 
-  // 2. Tasks routes (Per-user isolation)
   tasks: {
     list: authedProcedure
       .input(z.object({}).optional())
@@ -165,7 +154,6 @@ const appRouter = {
       }),
   },
 
-  // 3. User settings routes
   user: {
     get: authedProcedure
       .input(z.object({}).optional())
@@ -187,7 +175,6 @@ const appRouter = {
       }),
   },
 
-  // 4. Notifications / reminders trigger
   reminders: {
     test: publicProcedure
       .input(z.object({}).optional())

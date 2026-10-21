@@ -7,13 +7,8 @@ const { isMongoConnected } = require('../db/mongo');
 const { getLocalDateString } = require('../utils/streakCalculator');
 const { mockUsers, getTasksForUser } = require('./taskService');
 
-// Initialize Expo SDK client
 const expo = new Expo();
 
-/**
- * Sends push notifications to a list of messages using Expo Push API
- * @param {Array<Object>} messages 
- */
 async function sendExpoPushNotifications(messages) {
   if (!messages || messages.length === 0) return;
 
@@ -32,10 +27,6 @@ async function sendExpoPushNotifications(messages) {
   return tickets;
 }
 
-/**
- * Checks all users whose local time is 8:00 PM (20:00), who have notifications enabled,
- * and who have incomplete tasks for today.
- */
 async function checkAndSendReminders() {
   console.log('[Notifier] Checking for users needing reminders at 8:00 PM local time...');
   const now = new Date();
@@ -44,7 +35,6 @@ async function checkAndSendReminders() {
     let eligibleUsers = [];
 
     if (isMongoConnected()) {
-      // Find users with notification enabled and a valid push token
       eligibleUsers = await User.find({
         notification: 'enabled',
         expo_push_token: { $ne: null, $exists: true, $nin: [''] },
@@ -60,7 +50,6 @@ async function checkAndSendReminders() {
     for (const user of eligibleUsers) {
       const userTz = user.timezone || 'Asia/Calcutta';
 
-      // Check current local hour in user's timezone
       let localHour;
       try {
         const hourFormatter = new Intl.DateTimeFormat('en-US', {
@@ -73,12 +62,10 @@ async function checkAndSendReminders() {
         localHour = now.getUTCHours();
       }
 
-      // If it's 8:00 PM (hour 20) in user's timezone
       if (localHour === 20) {
         const { tasks } = await getTasksForUser(user._id.toString());
 
         for (const task of tasks) {
-          // If task not completed today
           if (!task.completed_today) {
             const streakCount = task.current_streak || 0;
             const body = streakCount > 0
@@ -110,11 +97,7 @@ async function checkAndSendReminders() {
   }
 }
 
-/**
- * Starts the hourly cron job to monitor and send streak reminders.
- */
 function initNotificationCron() {
-  // Run at the top of every hour (0 * * * *)
   cron.schedule('0 * * * *', () => {
     console.log('[Notifier Cron] Running hourly streak reminder job...');
     checkAndSendReminders();

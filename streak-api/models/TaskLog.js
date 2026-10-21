@@ -19,7 +19,6 @@ const taskLogSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for rapid query of a task's latest completion log
 taskLogSchema.index({ taskId: 1, completed_at: -1 });
 
 module.exports = mongoose.models.TaskLog || mongoose.model('TaskLog', taskLogSchema);

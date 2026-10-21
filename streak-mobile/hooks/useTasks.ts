@@ -24,7 +24,6 @@ export interface User {
   notification?: 'enabled' | 'disabled';
 }
 
-// Development default host: Android emulator uses 10.0.2.2, iOS/Web uses localhost
 const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 export const API_BASE_URL = `http://${DEFAULT_HOST}:5000/api`;
 
@@ -61,7 +60,6 @@ export function useTasks() {
 
 
 
-  // Optimistic UI Update for clicking "Done"
   const markDone = async (task: Task) => {
     if (task.completed_today || task.is_locked || !user) {
       return;
@@ -69,7 +67,6 @@ export function useTasks() {
 
     const prevTasks = [...tasks];
 
-    // Optimistically update: +1 streak, locked immediately
     setTasks((current) =>
       current.map((t) =>
         t.id === task.id

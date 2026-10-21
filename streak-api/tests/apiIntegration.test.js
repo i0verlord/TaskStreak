@@ -4,26 +4,22 @@ const app = require('../server');
 async function runIntegrationTests() {
   console.log('🚀 Running TaskStreak API Phase 1 Integration Tests...\n');
 
-  // Start server on a dedicated test port
   const server = app.listen(5099);
   const BASE_URL = 'http://localhost:5099';
 
   try {
-    // 1. GET /health
     const healthRes = await fetch(`${BASE_URL}/health`);
     assert.strictEqual(healthRes.status, 200);
     const healthData = await healthRes.json();
     assert.strictEqual(healthData.status, 'ok');
     console.log('✓ [GET /health] Server is responsive and healthy.');
 
-    // 2. GET /api/tasks (verify clean array)
     const tasksRes = await fetch(`${BASE_URL}/api/tasks`);
     assert.strictEqual(tasksRes.status, 200);
     const tasksData = await tasksRes.json();
     assert.ok(Array.isArray(tasksData.tasks), 'tasks should be an array');
     console.log(`✓ [GET /api/tasks] Successfully fetched tasks. Count: ${tasksData.tasks.length}`);
 
-    // 3. POST /api/tasks (Create a new task)
     const createRes = await fetch(`${BASE_URL}/api/tasks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,7 +31,6 @@ async function runIntegrationTests() {
     assert.ok(testTaskId, 'Created task must have an ID');
     console.log(`✓ [POST /api/tasks] Created dynamic task: "${createData.task.title}" (ID: ${testTaskId})`);
 
-    // 4. POST /api/tasks/:id/log (Click "Done" today)
     console.log('\n--- Test Scenario A: Click Done today (Valid completion) ---');
     const doneRes1 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
@@ -50,7 +45,6 @@ async function runIntegrationTests() {
     assert.strictEqual(doneData1.task.current_streak, 1);
     console.log(`✓ [POST /api/tasks/:id/log] Succeeded: ${doneData1.message} (Streak: ${doneData1.task.current_streak})`);
 
-    // 5. POST /api/tasks/:id/log again today (MUST BLOCK)
     console.log('\n--- Test Scenario B: Click Done again on SAME day (MUST BLOCK) ---');
     const doneRes2 = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/log`, {
       method: 'POST',
@@ -63,7 +57,6 @@ async function runIntegrationTests() {
     assert.match(doneData2.error, /already completed today/i);
     console.log(`✓ [POST /api/tasks/:id/log] Successfully BLOCKED with 400 Bad Request: "${doneData2.error}"`);
 
-    // 6. POST /api/tasks/:id/log (Simulate NEXT DAY in user timezone)
     console.log('\n--- Test Scenario C: Simulate clicking Done NEXT DAY (MUST INCREMENT) ---');
     const tomorrowUtc = new Date();
     tomorrowUtc.setUTCDate(tomorrowUtc.getUTCDate() + 1);
@@ -79,7 +72,6 @@ async function runIntegrationTests() {
     assert.strictEqual(doneData3.task.current_streak, 2);
     console.log(`✓ [POST /api/tasks/:id/log] Next day accepted: ${doneData3.message} (New streak: ${doneData3.task.current_streak})`);
 
-    // 7. POST /api/tasks/:id/log (Simulate 3 MISSED DAYS -> Reset to 1, preserve longest streak)
     console.log('\n--- Test Scenario D: Simulate 3 MISSED DAYS (MUST RESET TO 1) ---');
     const fourDaysLaterUtc = new Date(tomorrowUtc);
     fourDaysLaterUtc.setUTCDate(fourDaysLaterUtc.getUTCDate() + 4);
@@ -96,7 +88,6 @@ async function runIntegrationTests() {
     assert.strictEqual(doneData5.task.longest_streak, 2);
     console.log(`✓ [POST /api/tasks/:id/log] Broken streak reset to 1. Longest streak preserved: ${doneData5.task.longest_streak}`);
 
-    // 8. GET /api/tasks/:id/logs (Verify Immutable Task Logs)
     console.log('\n--- Test Scenario E: Verify Immutable Task Logs ---');
     const logsRes = await fetch(`${BASE_URL}/api/tasks/${testTaskId}/logs`);
     assert.strictEqual(logsRes.status, 200);
@@ -105,7 +96,6 @@ async function runIntegrationTests() {
     assert.ok(logsData.logs.length >= 3, 'Should have recorded 3 completions');
     console.log(`✓ [GET /api/tasks/:id/logs] Found ${logsData.logs.length} immutable UTC completion records.`);
 
-    // 9. DELETE /api/tasks/:id
     console.log('\n--- Test Scenario F: Delete Task ---');
     const delRes = await fetch(`${BASE_URL}/api/tasks/${testTaskId}`, {
       method: 'DELETE',
@@ -126,4 +116,3 @@ async function runIntegrationTests() {
 }
 
 runIntegrationTests();
-

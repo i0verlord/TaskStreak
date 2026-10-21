@@ -3,11 +3,7 @@ const { getLocalDateString, evaluateStreak } = require('../utils/streakCalculato
 
 console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
 
-// 1. Timezone boundary conversion test
 {
-  // 2026-10-07 01:00:00 UTC is:
-  // - 2026-10-07 06:30:00 in Asia/Calcutta (+5:30) -> 2026-10-07
-  // - 2026-10-06 21:00:00 in America/New_York (-4:00 EDT) -> 2026-10-06 (Still previous day!)
   const utcDate = new Date('2026-10-07T01:00:00.000Z');
   
   const calcuttaDate = getLocalDateString(utcDate, 'Asia/Calcutta');
@@ -18,7 +14,6 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
   console.log('✓ Timezone boundary conversion verified (Calcutta: Oct 7, New York: Oct 6)');
 }
 
-// 2. First completion ever (Day 1)
 {
   const result = evaluateStreak({
     nowUtc: new Date('2026-10-07T12:00:00Z'),
@@ -34,7 +29,6 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
   console.log('✓ First task completion initializes streak to 1');
 }
 
-// 3. Same Day Click (Difference = 0 days) -> Must be locked
 {
   const result = evaluateStreak({
     nowUtc: new Date('2026-10-07T18:00:00Z'),
@@ -49,7 +43,6 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
   console.log('✓ Same-day click blocked: button locked for today');
 }
 
-// 4. Consecutive Day (Difference = 1 day) -> Streak increments (+1)
 {
   const result = evaluateStreak({
     nowUtc: new Date('2026-10-07T10:00:00Z'),
@@ -65,7 +58,6 @@ console.log('🧪 Running Streak Calculator Engine Verification Tests...\n');
   console.log('✓ Consecutive day completion increments streak from 14 to 15');
 }
 
-// 5. Missed 1 day (Difference = 2 days) -> Resets to 1 while preserving longest streak
 {
   const result = evaluateStreak({
     nowUtc: new Date('2026-10-07T10:00:00Z'),

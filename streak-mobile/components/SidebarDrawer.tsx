@@ -55,7 +55,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
         
         <SafeAreaView style={styles.drawerContainer}>
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            {/* Header: Branding & Close */}
             <View style={styles.header}>
               <View style={styles.branding}>
                 <View style={styles.logoBadge}>
@@ -77,7 +76,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Profile Card (Top: Single User Synced with Web) */}
             <View style={styles.profileCard}>
               <View style={styles.profileInfo}>
                 <Text style={styles.profileName} numberOfLines={1}>
@@ -95,7 +93,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </View>
             </View>
 
-            {/* Overview Section */}
             <View style={styles.section}>
               <Text style={styles.sectionHeader}>Overview</Text>
 
@@ -122,7 +119,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </View>
             </View>
 
-            {/* Settings Section: Timezone */}
             <View style={styles.section}>
               <Text style={styles.sectionHeader}>Active Timezone</Text>
               <Text style={styles.sectionDesc}>
@@ -151,7 +147,6 @@ export const SidebarDrawer: React.FC<SidebarDrawerProps> = ({
               </View>
             </View>
 
-            {/* Settings Section: 8 PM Push Notification Toggle */}
             <View style={styles.section}>
               <Text style={styles.sectionHeader}>Notifications</Text>
               <View style={styles.toggleCard}>

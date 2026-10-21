@@ -6,7 +6,6 @@ const TaskLog = require('../models/TaskLog');
 const { isMongoConnected } = require('../db/mongo');
 const { evaluateStreak, getLocalDateString } = require('../utils/streakCalculator');
 
-// In-memory fallback stores when MongoDB Atlas is offline or not configured yet
 let mockUsers = [
   {
     _id: '670000000000000000000001',
@@ -24,9 +23,6 @@ let mockUsers = [
 let mockTasks = [];
 let mockTaskLogs = [];
 
-/**
- * Ensures the default demo user exists in MongoDB Atlas if connected
- */
 async function seedDefaultUserIfMongo() {
   if (!isMongoConnected()) return;
   try {
@@ -59,9 +55,6 @@ async function seedDefaultUserIfMongo() {
   }
 }
 
-/**
- * Register a new user
- */
 async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -80,7 +73,6 @@ async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
     return sanitizeUser(user);
   }
 
-  // Mock store
   const existing = mockUsers.find((u) => u.email === normalizedEmail);
   if (existing) {
     throw new Error('An account with this email already exists.');
@@ -100,9 +92,6 @@ async function registerUser({ email, password, timezone = 'Asia/Calcutta' }) {
   return sanitizeUser(newUser);
 }
 
-/**
- * Login user (supports username 'admin' or email)
- */
 async function loginUser({ email, password }) {
   const normalizedInput = email.trim().toLowerCase();
 
@@ -124,7 +113,6 @@ async function loginUser({ email, password }) {
     return sanitizeUser(user);
   }
 
-  // Mock store
   const user = mockUsers.find(
     (u) =>
       u.email.toLowerCase() === normalizedInput ||
@@ -141,9 +129,6 @@ async function loginUser({ email, password }) {
   return sanitizeUser(user);
 }
 
-/**
- * Retrieves the default demo user (from MongoDB Atlas or mock store)
- */
 async function getDefaultDemoUser() {
   if (isMongoConnected()) {
     try {
@@ -176,9 +161,6 @@ async function getDefaultDemoUser() {
   return sanitizeUser(mockUsers[0]);
 }
 
-/**
- * Get user by ID
- */
 async function getUserById(id) {
   if (!id) return null;
 
@@ -195,9 +177,6 @@ async function getUserById(id) {
   return user ? sanitizeUser(user) : null;
 }
 
-/**
- * Update user settings
- */
 async function updateUser(id, { timezone, expo_push_token, notification }) {
   if (isMongoConnected()) {
     const updateData = {};
@@ -218,9 +197,6 @@ async function updateUser(id, { timezone, expo_push_token, notification }) {
   return sanitizeUser(user);
 }
 
-/**
- * Get user's tasks with dynamic completion status based on user's timezone
- */
 async function getTasksForUser(userId) {
   const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
@@ -256,7 +232,6 @@ async function getTasksForUser(userId) {
     return { tasks: tasksWithStatus, user };
   }
 
-  // In-memory fallback
   const tasks = mockTasks.filter((t) => t.userId.toString() === user._id.toString());
   const tasksWithStatus = tasks.map((task) => {
     const logs = mockTaskLogs
@@ -286,9 +261,6 @@ async function getTasksForUser(userId) {
   return { tasks: tasksWithStatus, user };
 }
 
-/**
- * Create a new task for user
- */
 async function createTaskForUser(userId, title) {
   const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
@@ -329,9 +301,6 @@ async function createTaskForUser(userId, title) {
   };
 }
 
-/**
- * Rename/Edit a task for user
- */
 async function updateTaskForUser(userId, taskId, title) {
   const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
@@ -364,9 +333,6 @@ async function updateTaskForUser(userId, taskId, title) {
   };
 }
 
-/**
- * Delete a task and its logs from database
- */
 async function deleteTaskForUser(userId, taskId) {
   const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
@@ -390,9 +356,6 @@ async function deleteTaskForUser(userId, taskId) {
   return { success: true, message: 'Task deleted successfully from database' };
 }
 
-/**
- * Log task completion with timezone validation and streak freeze deduction
- */
 async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
   const user = (userId ? await getUserById(userId) : null) || (await getDefaultDemoUser());
   if (!user) throw new Error('User not found');
@@ -445,7 +408,6 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
     };
   }
 
-  // In-memory fallback
   const task = mockTasks.find((t) => (t._id.toString() === taskId.toString() || t.id === taskId) && t.userId.toString() === user._id.toString());
   if (!task) throw new Error('Task not found');
 
@@ -489,9 +451,6 @@ async function logTaskCompletion(userId, taskId, simulatedNowUtc) {
   };
 }
 
-/**
- * Get all completion logs for a task to render heatmap
- */
 async function getTaskLogs(taskId) {
   if (isMongoConnected()) {
     const logs = await TaskLog.find({ taskId }).sort({ completed_at: 1 });
@@ -512,9 +471,6 @@ async function getTaskLogs(taskId) {
     }));
 }
 
-/**
- * Remove sensitive fields from user object
- */
 function sanitizeUser(user) {
   const obj = user.toObject ? user.toObject() : { ...user };
   delete obj.password;

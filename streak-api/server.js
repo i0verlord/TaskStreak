@@ -13,12 +13,10 @@ const { initNotificationCron, checkAndSendReminders } = require('./services/noti
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// 1. oRPC Handler mounted under /rpc
 const rpcHandler = new RPCHandler(appRouter);
 
 app.use('/rpc', async (req, res, next) => {
@@ -28,9 +26,7 @@ app.use('/rpc', async (req, res, next) => {
     try {
       const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET);
       userId = decoded.userId;
-    } catch {
-      // Invalid/expired token
-    }
+    } catch {}
   }
 
   const { matched } = await rpcHandler.handle(req, res, {
@@ -46,7 +42,6 @@ app.use('/rpc', async (req, res, next) => {
   next();
 });
 
-// 2. Health & Root status
 app.get('/', (req, res) => {
   res.json({
     name: 'TaskStreak API',
@@ -65,7 +60,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Helper to resolve user ID from query, body, Bearer auth token, or single user default
 async function resolveUserId(req) {
   let userId = req.query?.userId || req.body?.userId;
   const authHeader = req.headers?.authorization;
@@ -82,7 +76,6 @@ async function resolveUserId(req) {
   return userId;
 }
 
-// 3. Fallback REST compatibility routes (convenience for curl / mobile / legacy clients)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const user = await taskService.getSingleUser();
@@ -199,7 +192,6 @@ app.post('/api/test/reminders', async (req, res) => {
   }
 });
 
-// Boot server
 if (require.main === module) {
   app.listen(PORT, async () => {
     console.log(`================================================`);
